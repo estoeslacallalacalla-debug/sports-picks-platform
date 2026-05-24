@@ -12,7 +12,22 @@ export default function Home() {
       <h1 style={{ color: "#2563eb" }}>
         ⚽ Sports Picks Platform
       </h1>
-
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginTop: "20px",
+    marginBottom: "20px"
+  }}
+>
+  <button>⚽ Inicio</button>
+  <button>🔴 En Vivo</button>
+  <button>📅 Prematch</button>
+  <button>🔥 Picks</button>
+  <button>💎 Surebets</button>
+  <button>🤖 Telegram</button>
+</div>
       <p>
         Análisis deportivo en vivo y prematch.
       </p>
