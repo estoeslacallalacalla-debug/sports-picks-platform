@@ -1,4 +1,16 @@
+import { useEffect, useState } from "react";
+
 export default function Live() {
+  const [matches, setMatches] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/live")
+      .then((res) => res.json())
+      .then((data) => {
+        setMatches(data.response || []);
+      });
+  }, []);
+
   return (
     <div
       style={{
@@ -12,20 +24,35 @@ export default function Live() {
         🔴 Partidos En Vivo
       </h1>
 
-      <div
-        style={{
-          background: "white",
-          padding: "15px",
-          borderRadius: "12px",
-          marginTop: "20px"
-        }}
-      >
-        <h2>Simba vs Azam</h2>
-        <p>Minuto: 63</p>
-        <p>Resultado: 1 - 0</p>
-        <p>Corners: 7</p>
-        <p>Tarjetas: 3</p>
-      </div>
+      {matches.length === 0 ? (
+        <p>Cargando partidos...</p>
+      ) : (
+        matches.map((match) => (
+          <div
+            key={match.fixture.id}
+            style={{
+              background: "white",
+              padding: "15px",
+              borderRadius: "12px",
+              marginTop: "15px"
+            }}
+          >
+            <h3>{match.league.name}</h3>
+
+            <p>
+              {match.teams.home.name} vs {match.teams.away.name}
+            </p>
+
+            <p>
+              Resultado: {match.goals.home} - {match.goals.away}
+            </p>
+
+            <p>
+              Minuto: {match.fixture.status.elapsed || "-"}
+            </p>
+          </div>
+        ))
+      )}
     </div>
   );
 }
