@@ -21,12 +21,29 @@ export default function Home() {
     marginBottom: "20px"
   }}
 >
+  <a href="/">
   <button>⚽ Inicio</button>
+</a>
+
+<a href="/live">
   <button>🔴 En Vivo</button>
+</a>
+
+<a href="/prematch">
   <button>📅 Prematch</button>
+</a>
+
+<a href="/picks">
   <button>🔥 Picks</button>
+</a>
+
+<a href="/surebets">
   <button>💎 Surebets</button>
+</a>
+
+<a href="/telegram">
   <button>🤖 Telegram</button>
+</a>
 </div>
       <p>
         Análisis deportivo en vivo y prematch.
