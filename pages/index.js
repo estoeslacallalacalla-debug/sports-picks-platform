@@ -38,7 +38,7 @@ export default function Home() {
 </a>
 
 <a href="/surebets">
-  <botón>💎 Apuestas seguras</botón>
+  <button>💎 Apuestas seguras</button>
 </a>
 
 <a href="/telegram">
