@@ -43,7 +43,13 @@ const [filter, setFilter] = useState("all");
     👩 Femenino
   </button>
 </div>
-      {matches.map((match) => (
+      {matches
+  .sort((a, b) =>
+    (70 + (b.fixture.id % 21)) -
+    (70 + (a.fixture.id % 21))
+  )
+  .slice(0, 10)
+  .map((match) => (
         <div
           key={match.fixture.id}
           style={{
