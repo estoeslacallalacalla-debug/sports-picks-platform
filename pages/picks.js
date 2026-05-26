@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export default function Picks() {
   const [matches, setMatches] = useState([]);
-
+const [filter, setFilter] = useState("all");
   useEffect(() => {
     fetch("/api/prematch")
       .then((res) => res.json())
@@ -23,7 +23,26 @@ export default function Picks() {
       <h1 style={{ color: "#2563eb" }}>
         🔥 Picks Recomendados
       <h1>🔥 Selecciones funcionando</h1>
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    marginBottom: "20px"
+  }}
+>
+  <button onClick={() => setFilter("all")}>
+    🌐 Todas
+  </button>
 
+  <button onClick={() => setFilter("male")}>
+    ⚽ Masculino
+  </button>
+
+  <button onClick={() => setFilter("female")}>
+    👩 Femenino
+  </button>
+</div>
       {matches.map((match) => (
         <div
           key={match.fixture.id}
