@@ -41,8 +41,8 @@ export default function Home() {
   <botón>💎 Apuestas seguras</botón>
 </a>
 
-<a href="/Telegram">
-  <button>🤖 Telegram</button>
+<a href="/telegram">
+  <button>🤖 telegram</button>
 </a>
 </div>
       <p>
@@ -86,7 +86,7 @@ export default function Home() {
           marginTop: "20px"
         }}
       >
-        <h2>🤖 Telegram</h2>
+        <h2>🤖 telegram</h2>
         <p>Alertas automáticas próximamente.</p>
       </div>
     </div>
