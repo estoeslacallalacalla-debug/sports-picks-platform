@@ -41,8 +41,8 @@ export default function Home() {
   <botón>💎 Apuestas seguras</botón>
 </a>
 
-<a href="/telegram">
-  <button>🤖 telegram</button>
+<a href="/Telegram">
+  <button>🤖 Telegram</button>
 </a>
 </div>
       <p>
