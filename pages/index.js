@@ -42,7 +42,7 @@ export default function Home() {
 </a>
 
 <a href="/telegram">
-  <button>🤖 Telegram</button>
+  <button>🤖 telegram</button>
 </a>
 </div>
       <p>
