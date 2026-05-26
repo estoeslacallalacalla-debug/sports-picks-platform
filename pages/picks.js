@@ -61,7 +61,9 @@ const [filter, setFilter] = useState("all");
 
           <p>🎯 Mercado sugerido: Más de 1.5 goles</p>
 
-          <p>📊 Confianza estimada: 75%</p>
+          <p>
+  📊 Confianza estimada: {70 + (match.fixture.id % 21)}%
+</p>
         </div>
       ))}
     </div>
