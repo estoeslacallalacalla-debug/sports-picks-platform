@@ -22,7 +22,7 @@ export default function Picks() {
     >
       <h1 style={{ color: "#2563eb" }}>
         🔥 Picks Recomendados
-      </h1>
+      <h1>🔥 Selecciones funcionando</h1>
 
       {matches.map((match) => (
         <div
