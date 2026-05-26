@@ -22,7 +22,7 @@ const [filter, setFilter] = useState("all");
     >
       <h1 style={{ color: "#2563eb" }}>
         🔥 Picks Recomendados
-      <h1>🔥 Selecciones funcionando</h1>
+    </h1>🔥 Picks Recomendados
 <div
   style={{
     display: "flex",
