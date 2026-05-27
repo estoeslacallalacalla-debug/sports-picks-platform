@@ -87,3 +87,7 @@ const [filter, setFilter] = useState("all");
 </p>
 
 </div>
+      ))}
+    </div>
+  );
+}
