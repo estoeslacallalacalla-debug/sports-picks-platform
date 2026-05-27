@@ -51,7 +51,16 @@ const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
 >
   ⭐ Alta confianza
 </button>
-  {matches
+matches
+  .filter((match) => {
+    const confianza = 70 + (match.fixture.id % 21);
+
+    if (soloAltaConfianza) {
+      return confianza >= 85;
+    }
+
+    return true;
+  })
   .sort((a, b) =>
     (70 + (b.fixture.id % 21)) -
     (70 + (a.fixture.id % 21))
