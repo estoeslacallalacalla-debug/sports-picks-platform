@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 export default function Picks() {
   const [matches, setMatches] = useState([]);
 const [filter, setFilter] = useState("all");
+const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
   useEffect(() => {
     fetch("/api/prematch")
       .then((res) => res.json())
