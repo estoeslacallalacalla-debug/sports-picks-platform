@@ -5,6 +5,8 @@ export default function Picks() {
   const [soloAltaConfianza, setSoloAltaConfianza] =
     useState(false);
 
+  const [filter, setFilter] = useState("all");
+
   useEffect(() => {
     fetch("/api/prematch")
       .then((res) => res.json())
@@ -26,29 +28,76 @@ export default function Picks() {
         🔥 Picks Recomendados
       </h1>
 
-      <button
-        onClick={() =>
-          setSoloAltaConfianza(
-            !soloAltaConfianza
-          )
-        }
+      <div
         style={{
-          padding: "10px",
-          borderRadius: "10px",
-          border: "none",
-          background: "#2563eb",
-          color: "white",
-          marginBottom: "20px",
-          cursor: "pointer"
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+          marginBottom: "20px"
         }}
       >
-        ⭐ Alta confianza
-      </button>
+        <button
+          onClick={() => setFilter("all")}
+        >
+          🌐 Todas
+        </button>
+
+        <button
+          onClick={() => setFilter("male")}
+        >
+          ⚽ Masculino
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("female")
+          }
+        >
+          👩 Femenino
+        </button>
+
+        <button
+          onClick={() =>
+            setSoloAltaConfianza(
+              !soloAltaConfianza
+            )
+          }
+        >
+          ⭐ Alta confianza
+        </button>
+      </div>
 
       {matches
         .filter((match) => {
           const confianza =
             70 + (match.fixture.id % 21);
+
+          const leagueName =
+            match.league.name.toLowerCase();
+
+          const isFemale =
+            leagueName.includes("women") ||
+            leagueName.includes(
+              "woman"
+            ) ||
+            leagueName.includes("fem") ||
+            leagueName.includes(
+              "liga f"
+            );
+
+          if (
+            filter === "female" &&
+            !isFemale
+          ) {
+            return false;
+          }
+
+          if (
+            filter === "male" &&
+            isFemale
+          ) {
+            return false;
+          }
 
           if (soloAltaConfianza) {
             return confianza >= 85;
