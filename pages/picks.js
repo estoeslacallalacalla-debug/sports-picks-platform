@@ -48,9 +48,10 @@ const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
   onClick={() =>
     setSoloAltaConfianza(!soloAltaConfianza)
   }
-
-<button>⭐ Alta confianza</button>
 >
+  ⭐ Alta confianza
+</button>
+
 {matches
   .filter((match) => {
     const confianza = 70 + (match.fixture.id % 21);
@@ -61,21 +62,22 @@ const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
 
     return true;
   })
-  .sort(...)
+  .sort(
+    (a, b) =>
+      (70 + (b.fixture.id % 21)) -
+      (70 + (a.fixture.id % 21))
+  )
   .slice(0, 10)
   .map((match) => (
-    <div>
-      ...
-    </div>
-  ))}
-          key={match.fixture.id}
-          style={{
-            background: "white",
-            padding: "15px",
-            borderRadius: "12px",
-            marginTop: "15px"
-          }}
-        >
+    <div
+      key={match.fixture.id}
+      style={{
+        background: "white",
+        padding: "15px",
+        borderRadius: "12px",
+        marginTop: "15px"
+      }}
+    >
           <h3>{match.league.name}</h3>
 
           <p>
