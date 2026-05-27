@@ -67,8 +67,7 @@ const [filter, setFilter] = useState("all");
 
           <p>🎯 Mercado sugerido: Más de 1.5 goles</p>
 
-          <p>
-  <p
+<p
   style={{
     color:
       (70 + (match.fixture.id % 21)) >= 90
@@ -86,8 +85,5 @@ const [filter, setFilter] = useState("all");
     : "🔴"}{" "}
   Confianza estimada: {70 + (match.fixture.id % 21)}%
 </p>
-        </div>
-      ))}
-    </div>
-  );
-}
+
+</div>
