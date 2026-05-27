@@ -65,7 +65,17 @@ const [filter, setFilter] = useState("all");
             {match.teams.home.name} vs {match.teams.away.name}
           </p>
 
-          <p>🎯 Mercado sugerido: Más de 1.5 goles</p>
+      <p>
+  🎯 Mercado sugerido: {
+    (70 + (match.fixture.id % 21)) >= 88
+      ? "Más de 2.5 goles"
+      : (70 + (match.fixture.id % 21)) >= 82
+      ? "Ambos equipos marcan"
+      : (70 + (match.fixture.id % 21)) >= 76
+      ? "Más de 1.5 goles"
+      : "Menos de 3.5 goles"
+  }
+</p>
 
 <p
   style={{
