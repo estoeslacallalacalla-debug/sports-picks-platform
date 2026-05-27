@@ -111,90 +111,100 @@ export default function Picks() {
             (70 + (a.fixture.id % 21))
         )
         .slice(0, 10)
-        .map((match) => (
-          <div
-            key={match.fixture.id}
-            style={{
-              background: "white",
-              padding: "15px",
-              borderRadius: "12px",
-              marginTop: "15px"
-            }}
-          >
-            <h3
+        .map((match) => {
+          const confianza =
+            70 + (match.fixture.id % 21);
+
+          return (
+            <div
+              key={match.fixture.id}
               style={{
-                color: "#2563eb"
+                background: "white",
+                padding: "15px",
+                borderRadius: "12px",
+                marginTop: "15px",
+                border:
+                  confianza >= 88
+                    ? "3px solid gold"
+                    : "none"
               }}
             >
-              🏆 {match.league.name}
-            </h3>
+              {confianza >= 88 && (
+                <p
+                  style={{
+                    color: "gold",
+                    fontWeight: "bold",
+                    fontSize: "18px"
+                  }}
+                >
+                  🔥 PARTIDO TOP
+                </p>
+              )}
 
-            <p
-              style={{
-                fontSize: "18px",
-                fontWeight: "bold"
-              }}
-            >
-              ⚽ {match.teams.home.name} vs{" "}
-              {match.teams.away.name}
-            </p>
+              <h3
+                style={{
+                  color: "#2563eb"
+                }}
+              >
+                🏆 {match.league.name}
+              </h3>
 
-            <p>
-              🕒{" "}
-              {new Date(
-                match.fixture.date
-              ).toLocaleTimeString("es-ES", {
-                hour: "2-digit",
-                minute: "2-digit"
-              })}
-            </p>
+              <p
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "bold"
+                }}
+              >
+                ⚽ {match.teams.home.name} vs{" "}
+                {match.teams.away.name}
+              </p>
 
-            <p>
-              🎯 Mercado sugerido:{" "}
-              {(70 +
-                (match.fixture.id % 21)) >=
-              88
-                ? "Más de 2.5 goles"
-                : (70 +
-                    (match.fixture.id % 21)) >=
-                  82
-                ? "Ambos equipos marcan"
-                : (70 +
-                    (match.fixture.id % 21)) >=
-                  76
-                ? "Más de 1.5 goles"
-                : "Menos de 3.5 goles"}
-            </p>
+              <p>
+                🕒{" "}
+                {new Date(
+                  match.fixture.date
+                ).toLocaleTimeString(
+                  "es-ES",
+                  {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  }
+                )}
+              </p>
 
-            <p
-              style={{
-                color:
-                  (70 +
-                    (match.fixture.id % 21)) >=
-                  90
-                    ? "green"
-                    : (70 +
-                        (match.fixture.id %
-                          21)) >= 80
-                    ? "orange"
-                    : "red",
-                fontWeight: "bold"
-              }}
-            >
-              {(70 +
-                (match.fixture.id % 21)) >=
-              90
-                ? "🟢"
-                : (70 +
-                    (match.fixture.id % 21)) >=
-                  80
-                ? "🟡"
-                : "🔴"}{" "}
-              Confianza estimada:{" "}
-              {70 + (match.fixture.id % 21)}%
-            </p>
-          </div>
-        ))}
+              <p>
+                🎯 Mercado sugerido:{" "}
+                {confianza >= 88
+                  ? "Más de 2.5 goles"
+                  : confianza >= 82
+                  ? "Ambos equipos marcan"
+                  : confianza >= 76
+                  ? "Más de 1.5 goles"
+                  : "Menos de 3.5 goles"}
+              </p>
+
+              <p
+                style={{
+                  color:
+                    confianza >= 90
+                      ? "green"
+                      : confianza >= 80
+                      ? "orange"
+                      : "red",
+                  fontWeight: "bold"
+                }}
+              >
+                {confianza >= 90
+                  ? "🟢"
+                  : confianza >= 80
+                  ? "🟡"
+                  : "🔴"}{" "}
+                Confianza estimada:{" "}
+                {confianza}%
+              </p>
+            </div>
+          );
+        })}
     </div>
   );
 }
