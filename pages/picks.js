@@ -50,7 +50,7 @@ const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
   }
 
 <button>⭐ Alta confianza</button>
-
+>
 {matches
   .filter((match) => {
     const confianza = 70 + (match.fixture.id % 21);
