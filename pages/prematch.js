@@ -44,7 +44,17 @@ export default function Prematch() {
             </p>
 
             <p>
-              Hora: {match.fixture.date}
+              📅 {new Date(match.fixture.date).toLocaleDateString("es-ES")}
+            </p>
+
+            <p>
+              🕒 {new Date(match.fixture.date).toLocaleTimeString(
+                "es-ES",
+                {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }
+              )}
             </p>
           </div>
         ))
