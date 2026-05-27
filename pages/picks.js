@@ -44,7 +44,14 @@ const [soloAltaConfianza, setSoloAltaConfianza] = useState(false);
     👩 Femenino
   </button>
 </div>
-      {matches
+    <button
+  onClick={() =>
+    setSoloAltaConfianza(!soloAltaConfianza)
+  }
+>
+  ⭐ Alta confianza
+</button>
+  {matches
   .sort((a, b) =>
     (70 + (b.fixture.id % 21)) -
     (70 + (a.fixture.id % 21))
