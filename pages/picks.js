@@ -15,6 +15,25 @@ export default function Picks() {
       });
   }, []);
 
+  const obtenerMercado = (
+    confianza,
+    fixtureId
+  ) => {
+    const mercados = [
+      "Más de 2.5 goles",
+      "Ambos equipos marcan",
+      "Más de 8.5 córners",
+      "Menos de 3.5 goles",
+      "Más de 3.5 tarjetas",
+      "Doble oportunidad local",
+      "Gol en la primera parte"
+    ];
+
+    return mercados[
+      fixtureId % mercados.length
+    ];
+  };
+
   return (
     <div
       style={{
@@ -152,6 +171,12 @@ export default function Picks() {
             return null;
           }
 
+          const mercado =
+            obtenerMercado(
+              confianza,
+              match.fixture.id
+            );
+
           if (confianza >= 90) {
             fetch(
               `/api/telegram?liga=${encodeURIComponent(
@@ -161,16 +186,15 @@ export default function Picks() {
                   " vs " +
                   match.teams.away.name
               )}&mercado=${encodeURIComponent(
-                confianza >= 90
-                  ? "Más de 2.5 goles"
-                  : "Ambos marcan"
+                mercado
               )}&confianza=${confianza}%`
             );
           }
 
           return {
             ...match,
-            confianza
+            confianza,
+            mercado
           };
         })
         .filter(Boolean)
@@ -240,13 +264,7 @@ export default function Picks() {
 
             <p>
               🎯 Mercado sugerido:{" "}
-              {match.confianza >= 90
-                ? "Más de 2.5 goles"
-                : match.confianza >= 84
-                ? "Ambos equipos marcan"
-                : match.confianza >= 78
-                ? "Más de 1.5 goles"
-                : "Menos de 3.5 goles"}
+              {match.mercado}
             </p>
 
             <p
