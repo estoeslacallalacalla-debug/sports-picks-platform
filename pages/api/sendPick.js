@@ -1,16 +1,24 @@
 import { sendTelegramMessage } from "../../lib/telegram";
 
 export default async function handler(req, res) {
-  const { match, confidence } = req.body;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-  const msg = `
+  try {
+    const { match, confidence } = req.body;
+
+    const msg = `
 🔥 PICK DETECTADO
 
-⚽ ${match}
+⚽ Partido: ${match}
 📊 Confianza: ${confidence}%
 `;
 
-  await sendTelegramMessage(msg);
+    await sendTelegramMessage(msg);
 
-  res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Error enviando pick" });
+  }
 }
