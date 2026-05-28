@@ -5,57 +5,44 @@ export default async function handler(req, res) {
   const CHAT_ID =
     "-1003814547497";
 
-  const picks = [
-    {
-      liga: "Libertadores",
-      partido:
-        "Boca Juniors vs River Plate",
-      mercado: "Más de 2.5 goles",
-      confianza: "92%"
-    },
-    {
-      liga: "Liga F",
-      partido:
-        "Barcelona F vs Madrid F",
-      mercado:
-        "Ambos equipos marcan",
-      confianza: "90%"
-    }
-  ];
+  const {
+    liga,
+    partido,
+    mercado,
+    confianza
+  } = req.query;
 
-  try {
-    for (const pick of picks) {
-      const mensaje = `
+  const mensaje = `
 🔥 PICK TOP
 
-🏆 ${pick.liga}
+🏆 ${liga}
 
-⚽ ${pick.partido}
+⚽ ${partido}
 
-🎯 ${pick.mercado}
+🎯 ${mercado}
 
-📊 Confianza: ${pick.confianza}
+📊 Confianza: ${confianza}
 `;
 
-      await fetch(
-        `https://api.telegram.org/bot${TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body: JSON.stringify({
-            chat_id: CHAT_ID,
-            text: mensaje
-          })
-        }
-      );
-    }
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: mensaje
+        })
+      }
+    );
 
-    res.status(200).json({
-      ok: true
-    });
+    const data = await response.json();
+
+    res.status(200).json(data);
   } catch (error) {
     res.status(500).json({
       error: error.message
