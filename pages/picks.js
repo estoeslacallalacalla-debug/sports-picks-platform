@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 
 export default function Picks() {
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] =
+    useState([]);
 
-  const [soloAltaConfianza, setSoloAltaConfianza] =
-    useState(false);
+  const [stats, setStats] =
+    useState({});
+
+  const [
+    soloAltaConfianza,
+    setSoloAltaConfianza
+  ] = useState(false);
 
   const [filter, setFilter] =
     useState("all");
@@ -33,6 +39,28 @@ export default function Picks() {
         await analyzed.json();
 
       setMatches(analyzedData);
+
+      analyzedData.forEach(
+        async (match) => {
+          const team =
+            match.teams.home.name;
+
+          const res =
+            await fetch(
+              `/api/teamStats?team=${encodeURIComponent(
+                team
+              )}`
+            );
+
+          const data =
+            await res.json();
+
+          setStats((prev) => ({
+            ...prev,
+            [team]: data
+          }));
+        }
+      );
     }
 
     cargarPicks();
@@ -106,6 +134,137 @@ export default function Picks() {
             filter === "female" &&
             !isFemale
           ) {
+            return false;
+          }
+
+          if (
+            filter === "male" &&
+            isFemale
+          ) {
+            return false;
+          }
+
+          if (
+            soloAltaConfianza &&
+            match.confianza < 85
+          ) {
+            return false;
+          }
+
+          return true;
+        })
+        .sort(
+          (a, b) =>
+            b.confianza - a.confianza
+        )
+        .slice(0, 10)
+        .map((match) => {
+          const team =
+            match.teams.home.name;
+
+          const teamStats =
+            stats[team];
+
+          return (
+            <div
+              key={match.fixture.id}
+              style={{
+                background: "white",
+                padding: "15px",
+                borderRadius: "12px",
+                marginTop: "15px",
+                border:
+                  match.confianza >=
+                  90
+                    ? "3px solid gold"
+                    : "none"
+              }}
+            >
+              {match.confianza >=
+                90 && (
+                <p
+                  style={{
+                    color: "gold",
+                    fontWeight:
+                      "bold"
+                  }}
+                >
+                  🔥 PARTIDO TOP
+                </p>
+              )}
+
+              <h3>
+                🏆{" "}
+                {
+                  match.league.name
+                }
+              </h3>
+
+              <p>
+                ⚽{" "}
+                {
+                  match.teams.home
+                    .name
+                }{" "}
+                vs{" "}
+                {
+                  match.teams.away
+                    .name
+                }
+              </p>
+
+              <p>
+                🎯 Mercado:{" "}
+                {match.mercado}
+              </p>
+
+              <p>
+                📊 Confianza:{" "}
+                {
+                  match.confianza
+                }
+                %
+              </p>
+
+              {teamStats && (
+                <div
+                  style={{
+                    marginTop:
+                      "10px",
+                    background:
+                      "#f3f4f6",
+                    padding:
+                      "10px",
+                    borderRadius:
+                      "10px"
+                  }}
+                >
+                  <p>
+                    📈 Últimos
+                    partidos:
+                  </p>
+
+                  <p>
+                    {teamStats.resultados.join(
+                      " "
+                    )}
+                  </p>
+
+                  <p>
+                    ⚽ Promedio
+                    goles:{" "}
+                    {
+                      teamStats.promedioGoles
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+    </div>
+  );
+}          ) {
             return false;
           }
 
