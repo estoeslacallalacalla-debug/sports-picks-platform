@@ -152,6 +152,22 @@ export default function Picks() {
             return null;
           }
 
+          if (confianza >= 90) {
+            fetch(
+              `/api/telegram?liga=${encodeURIComponent(
+                match.league.name
+              )}&partido=${encodeURIComponent(
+                match.teams.home.name +
+                  " vs " +
+                  match.teams.away.name
+              )}&mercado=${encodeURIComponent(
+                confianza >= 90
+                  ? "Más de 2.5 goles"
+                  : "Ambos marcan"
+              )}&confianza=${confianza}%`
+            );
+          }
+
           return {
             ...match,
             confianza
