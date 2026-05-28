@@ -1,3 +1,5 @@
+let enviados = [];
+
 export default async function handler(req, res) {
   const TOKEN =
     "8653728311:AAEK-cg-tcNjB1gF3HFA8HLRbOpb35OaF-U";
@@ -11,6 +13,22 @@ export default async function handler(req, res) {
     mercado,
     confianza
   } = req.query;
+
+  const idUnico =
+    partido + mercado;
+
+  if (enviados.includes(idUnico)) {
+    return res.status(200).json({
+      ok: true,
+      repetido: true
+    });
+  }
+
+  enviados.push(idUnico);
+
+  if (enviados.length > 100) {
+    enviados.shift();
+  }
 
   const mensaje = `
 🔥 PICK TOP
