@@ -1,33 +1,44 @@
 import { sendTelegramMessage } from "../../lib/telegram";
 
 export default async function handler(req, res) {
-  // ❌ Bloquear métodos que no sean POST
+  // 🔒 Solo POST permitido
   if (req.method !== "POST") {
     return res.status(405).json({
       ok: false,
-      error: "Method not allowed. Use POST.",
+      error: "Method not allowed. Use POST",
     });
   }
 
   try {
-    const { match, confidence } = req.body;
+    const { match, confidence } = req.body || {};
 
-    // ❌ Validación básica
-    if (!match || !confidence) {
+    // 🔍 Validación fuerte de datos
+    if (typeof match !== "string" || match.trim() === "") {
       return res.status(400).json({
         ok: false,
-        error: "Faltan datos (match o confidence)",
+        error: "match es obligatorio y debe ser texto",
       });
     }
 
-    const msg = `
-🔥 PICK DETECTADO
+    if (
+      typeof confidence !== "number" ||
+      confidence < 0 ||
+      confidence > 100
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "confidence debe ser un número entre 0 y 100",
+      });
+    }
+
+    const message = `
+🔥 <b>PICK DETECTADO</b>
 
 ⚽ Partido: ${match}
 📊 Confianza: ${confidence}%
 `;
 
-    await sendTelegramMessage(msg);
+    await sendTelegramMessage(message);
 
     return res.status(200).json({
       ok: true,
@@ -35,7 +46,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error("Error sendPick:", error);
+    console.error("sendPick error:", error);
 
     return res.status(500).json({
       ok: false,
