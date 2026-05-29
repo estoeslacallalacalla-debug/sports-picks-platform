@@ -5,38 +5,9 @@ export default async function handler(
   const apiKey =
     process.env.API_FOOTBALL_KEY;
 
-  const { team } = req.query;
+  const { teamId } = req.query;
 
   try {
-    // Buscar equipo
-    const searchResponse =
-      await fetch(
-        `https://v3.football.api-sports.io/teams?search=${team}`,
-        {
-          headers: {
-            "x-apisports-key":
-              apiKey
-          }
-        }
-      );
-
-    const searchData =
-      await searchResponse.json();
-
-    if (
-      !searchData.response ||
-      searchData.response.length === 0
-    ) {
-      return res.status(200).json({
-        resultados: [],
-        promedioGoles: "0.0"
-      });
-    }
-
-    const teamId =
-      searchData.response[0].team.id;
-
-    // Últimos 5 partidos
     const fixturesResponse =
       await fetch(
         `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5`,
@@ -77,7 +48,7 @@ export default async function handler(
           homeGoals + awayGoals;
 
         const isHome =
-          match.teams.home.id ===
+          match.teams.home.id ==
           teamId;
 
         const golesEquipo =
