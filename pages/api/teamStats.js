@@ -5,12 +5,16 @@ export default async function handler(
   const apiKey =
     process.env.API_FOOTBALL_KEY;
 
-  const { teamId } = req.query;
+  const {
+    teamId,
+    leagueId,
+    season
+  } = req.query;
 
   try {
-    const fixturesResponse =
+    const response =
       await fetch(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5`,
+        `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${teamId}`,
         {
           headers: {
             "x-apisports-key":
@@ -19,78 +23,60 @@ export default async function handler(
         }
       );
 
-    const fixturesData =
-      await fixturesResponse.json();
+    const data =
+      await response.json();
 
     if (
-      !fixturesData.response ||
-      fixturesData.response.length === 0
+      !data.response
     ) {
       return res.status(200).json({
-        resultados: [],
-        promedioGoles: "0.0"
+        promedioGoles:
+          "0.0",
+        over25: "0%",
+        btts: "0%"
       });
     }
 
-    const resultados = [];
+    const stats =
+      data.response;
 
-    let golesTotales = 0;
+    const golesFavor =
+      stats.goals.for.average.total ||
+      0;
 
-    fixturesData.response.forEach(
-      (match) => {
-        const homeGoals =
-          match.goals.home ?? 0;
+    const golesContra =
+      stats.goals.against.average
+        .total || 0;
 
-        const awayGoals =
-          match.goals.away ?? 0;
+    const over25 =
+      stats.goals.for.average.total >
+      1.5
+        ? "Alta"
+        : "Media";
 
-        golesTotales +=
-          homeGoals + awayGoals;
-
-        const isHome =
-          match.teams.home.id ==
-          teamId;
-
-        const golesEquipo =
-          isHome
-            ? homeGoals
-            : awayGoals;
-
-        const golesRival =
-          isHome
-            ? awayGoals
-            : homeGoals;
-
-        if (
-          golesEquipo >
-          golesRival
-        ) {
-          resultados.push("✅");
-        } else if (
-          golesEquipo ===
-          golesRival
-        ) {
-          resultados.push("➖");
-        } else {
-          resultados.push("❌");
-        }
-      }
-    );
-
-    const promedioGoles =
-      (
-        golesTotales /
-        fixturesData.response.length
-      ).toFixed(1);
+    const btts =
+      stats.clean_sheet.total <
+      stats.fixtures.played.total /
+        2
+        ? "Alta"
+        : "Media";
 
     res.status(200).json({
-      resultados,
-      promedioGoles
+      promedioGoles:
+        golesFavor,
+      golesEncajados:
+        golesContra,
+      over25,
+      btts
     });
   } catch (error) {
     res.status(200).json({
-      resultados: [],
-      promedioGoles: "0.0"
+      promedioGoles:
+        "0.0",
+      golesEncajados:
+        "0.0",
+      over25: "0%",
+      btts: "0%"
     });
   }
 }
