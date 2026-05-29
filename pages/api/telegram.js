@@ -6,8 +6,8 @@ export default async function handler(
     const token =
       process.env.TELEGRAM_BOT_TOKEN;
 
-    const chatId =
-      process.env.TELEGRAM_CHAT_ID;
+    const channel =
+      "@sportspicksia2026";
 
     const url =
       `https://api.telegram.org/bot${token}/sendMessage`;
@@ -20,9 +20,9 @@ export default async function handler(
             "application/json"
         },
         body: JSON.stringify({
-          chat_id: chatId,
+          chat_id: channel,
           text:
-            "🔥 Sports Picks IA funcionando correctamente"
+            "🔥 Sports Picks IA conectado correctamente al canal"
         })
       });
 
