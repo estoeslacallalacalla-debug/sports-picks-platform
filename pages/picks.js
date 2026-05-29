@@ -12,6 +12,9 @@ export default function Picks() {
     setSoloAltaConfianza
   ] = useState(false);
 
+  const [filter, setFilter] =
+    useState("all");
+
   useEffect(() => {
     async function cargarPicks() {
       const prematch =
@@ -76,22 +79,73 @@ export default function Picks() {
         fontFamily: "Arial"
       }}
     >
-      <h1>
+      <h1
+        style={{
+          color: "#2563eb"
+        }}
+      >
         🔥 Picks IA REAL
       </h1>
 
-      <button
-        onClick={() =>
-          setSoloAltaConfianza(
-            !soloAltaConfianza
-          )
-        }
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px",
+          flexWrap: "wrap"
+        }}
       >
-        ⭐ Alta confianza
-      </button>
+        <button
+          onClick={() =>
+            setFilter("all")
+          }
+        >
+          🌐 Todas
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("male")
+          }
+        >
+          ⚽ Masculino
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("female")
+          }
+        >
+          👩 Femenino
+        </button>
+
+        <button
+          onClick={() =>
+            setSoloAltaConfianza(
+              !soloAltaConfianza
+            )
+          }
+        >
+          ⭐ Alta confianza
+        </button>
+      </div>
 
       {matches
         .filter((match) => {
+          if (
+            filter === "female" &&
+            !match.isFemale
+          ) {
+            return false;
+          }
+
+          if (
+            filter === "male" &&
+            match.isFemale
+          ) {
+            return false;
+          }
+
           if (
             soloAltaConfianza &&
             match.confianza < 85
@@ -105,7 +159,7 @@ export default function Picks() {
           (a, b) =>
             b.confianza - a.confianza
         )
-        .slice(0, 10)
+        .slice(0, 15)
         .map((match) => {
           const teamId =
             match.teams.home.id;
@@ -119,12 +173,38 @@ export default function Picks() {
               style={{
                 background: "white",
                 padding: "15px",
-                marginTop: "15px",
                 borderRadius:
-                  "12px"
+                  "12px",
+                marginTop: "15px",
+                border:
+                  match.confianza >=
+                  90
+                    ? "3px solid gold"
+                    : "none"
               }}
             >
+              {match.confianza >=
+                90 && (
+                <p
+                  style={{
+                    color: "gold",
+                    fontWeight:
+                      "bold"
+                  }}
+                >
+                  🔥 PICK TOP
+                </p>
+              )}
+
               <h3>
+                🏆{" "}
+                {
+                  match.league.name
+                }
+              </h3>
+
+              <p>
+                ⚽{" "}
                 {
                   match.teams.home
                     .name
@@ -134,10 +214,10 @@ export default function Picks() {
                   match.teams.away
                     .name
                 }
-              </h3>
+              </p>
 
               <p>
-                🎯{" "}
+                🎯 Mercado:{" "}
                 {match.mercado}
               </p>
 
@@ -150,7 +230,18 @@ export default function Picks() {
               </p>
 
               {teamStats && (
-                <div>
+                <div
+                  style={{
+                    background:
+                      "#f3f4f6",
+                    padding:
+                      "10px",
+                    borderRadius:
+                      "10px",
+                    marginTop:
+                      "10px"
+                  }}
+                >
                   <p>
                     ⚽ Promedio
                     goles:{" "}
