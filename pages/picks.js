@@ -12,9 +12,6 @@ export default function Picks() {
     setSoloAltaConfianza
   ] = useState(false);
 
-  const [filter, setFilter] =
-    useState("all");
-
   useEffect(() => {
     async function cargarPicks() {
       const prematch =
@@ -45,9 +42,15 @@ export default function Picks() {
           const teamId =
             match.teams.home.id;
 
+          const leagueId =
+            match.league.id;
+
+          const season =
+            match.league.season;
+
           const res =
             await fetch(
-              `/api/teamStats?teamId=${teamId}`
+              `/api/teamStats?teamId=${teamId}&leagueId=${leagueId}&season=${season}`
             );
 
           const data =
@@ -73,75 +76,22 @@ export default function Picks() {
         fontFamily: "Arial"
       }}
     >
-      <h1 style={{ color: "#2563eb" }}>
-        🔥 Picks Recomendados
+      <h1>
+        🔥 Picks IA REAL
       </h1>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          flexWrap: "wrap",
-          marginBottom: "20px"
-        }}
+      <button
+        onClick={() =>
+          setSoloAltaConfianza(
+            !soloAltaConfianza
+          )
+        }
       >
-        <button
-          onClick={() => setFilter("all")}
-        >
-          🌐 Todas
-        </button>
-
-        <button
-          onClick={() => setFilter("male")}
-        >
-          ⚽ Masculino
-        </button>
-
-        <button
-          onClick={() =>
-            setFilter("female")
-          }
-        >
-          👩 Femenino
-        </button>
-
-        <button
-          onClick={() =>
-            setSoloAltaConfianza(
-              !soloAltaConfianza
-            )
-          }
-        >
-          ⭐ Alta confianza
-        </button>
-      </div>
+        ⭐ Alta confianza
+      </button>
 
       {matches
         .filter((match) => {
-          const league =
-            match.league.name.toLowerCase();
-
-          const isFemale =
-            league.includes("women") ||
-            league.includes("fem") ||
-            league.includes(
-              "liga f"
-            );
-
-          if (
-            filter === "female" &&
-            !isFemale
-          ) {
-            return false;
-          }
-
-          if (
-            filter === "male" &&
-            isFemale
-          ) {
-            return false;
-          }
-
           if (
             soloAltaConfianza &&
             match.confianza < 85
@@ -169,37 +119,12 @@ export default function Picks() {
               style={{
                 background: "white",
                 padding: "15px",
-                borderRadius: "12px",
                 marginTop: "15px",
-                border:
-                  match.confianza >=
-                  90
-                    ? "3px solid gold"
-                    : "none"
+                borderRadius:
+                  "12px"
               }}
             >
-              {match.confianza >=
-                90 && (
-                <p
-                  style={{
-                    color: "gold",
-                    fontWeight:
-                      "bold"
-                  }}
-                >
-                  🔥 PARTIDO TOP
-                </p>
-              )}
-
               <h3>
-                🏆{" "}
-                {
-                  match.league.name
-                }
-              </h3>
-
-              <p>
-                ⚽{" "}
                 {
                   match.teams.home
                     .name
@@ -209,10 +134,10 @@ export default function Picks() {
                   match.teams.away
                     .name
                 }
-              </p>
+              </h3>
 
               <p>
-                🎯 Mercado:{" "}
+                🎯{" "}
                 {match.mercado}
               </p>
 
@@ -225,34 +150,34 @@ export default function Picks() {
               </p>
 
               {teamStats && (
-                <div
-                  style={{
-                    marginTop:
-                      "10px",
-                    background:
-                      "#f3f4f6",
-                    padding:
-                      "10px",
-                    borderRadius:
-                      "10px"
-                  }}
-                >
-                  <p>
-                    📈 Últimos
-                    partidos:
-                  </p>
-
-                  <p>
-                    {teamStats.resultados.join(
-                      " "
-                    )}
-                  </p>
-
+                <div>
                   <p>
                     ⚽ Promedio
                     goles:{" "}
                     {
                       teamStats.promedioGoles
+                    }
+                  </p>
+
+                  <p>
+                    🛡️ Goles
+                    encajados:{" "}
+                    {
+                      teamStats.golesEncajados
+                    }
+                  </p>
+
+                  <p>
+                    🔥 Over 2.5:{" "}
+                    {
+                      teamStats.over25
+                    }
+                  </p>
+
+                  <p>
+                    🎯 BTTS:{" "}
+                    {
+                      teamStats.btts
                     }
                   </p>
                 </div>
