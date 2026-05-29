@@ -2,68 +2,39 @@ export default async function handler(
   req,
   res
 ) {
-  const token =
-    process.env.TELEGRAM_BOT_TOKEN;
-
-  const chatId =
-    process.env.TELEGRAM_CHAT_ID;
-
   try {
-    const prematch =
-      await fetch(
-        `${process.env.VERCEL_URL}/api/prematch`
-      );
+    const token =
+      process.env.TELEGRAM_BOT_TOKEN;
 
-    const prematchData =
-      await prematch.json();
+    const chatId =
+      process.env.TELEGRAM_CHAT_ID;
 
-    if (
-      !prematchData.response
-    ) {
-      return res.status(200).json({
-        ok: false
-      });
-    }
-
-    const topMatch =
-      prematchData.response[0];
-
-    const message = `
-🔥 PICK TOP IA
-
-🏆 ${topMatch.league.name}
-
-⚽ ${topMatch.teams.home.name} vs ${topMatch.teams.away.name}
-
-🎯 Mercado recomendado:
-Más de 2.5 goles
-
-📊 Confianza alta IA
-
-🤖 Sports Picks IA
-`;
-
-    const telegramUrl =
+    const url =
       `https://api.telegram.org/bot${token}/sendMessage`;
 
-    await fetch(telegramUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type":
-          "application/json"
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message
-      })
-    });
+    const response =
+      await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text:
+            "🔥 Sports Picks IA funcionando correctamente"
+        })
+      });
 
-    res.status(200).json({
-      ok: true
-    });
+    const data =
+      await response.json();
+
+    res.status(200).json(data);
   } catch (error) {
-    res.status(200).json({
-      ok: false
+    res.status(500).json({
+      ok: false,
+      error:
+        error.message
     });
   }
 }
