@@ -5,16 +5,12 @@ export default async function handler(
   const apiKey =
     process.env.API_FOOTBALL_KEY;
 
-  const {
-    teamId,
-    leagueId,
-    season
-  } = req.query;
+  const { teamId } = req.query;
 
   try {
     const response =
       await fetch(
-        `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${teamId}`,
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=10`,
         {
           headers: {
             "x-apisports-key":
@@ -26,7 +22,10 @@ export default async function handler(
     const data =
       await response.json();
 
-    if (!data.response) {
+    if (
+      !data.response ||
+      data.response.length === 0
+    ) {
       return res.status(200).json({
         promedioGoles:
           "0.0",
@@ -37,42 +36,87 @@ export default async function handler(
       });
     }
 
-    const stats =
-      data.response;
+    let golesFavor = 0;
+    let golesContra = 0;
+    let partidosOver25 = 0;
+    let partidosBTTS = 0;
+
+    data.response.forEach(
+      (match) => {
+        const isHome =
+          match.teams.home.id ==
+          teamId;
+
+        const golesEquipo =
+          isHome
+            ? match.goals.home
+            : match.goals.away;
+
+        const golesRival =
+          isHome
+            ? match.goals.away
+            : match.goals.home;
+
+        golesFavor +=
+          golesEquipo;
+
+        golesContra +=
+          golesRival;
+
+        if (
+          golesEquipo +
+            golesRival >=
+          3
+        ) {
+          partidosOver25++;
+        }
+
+        if (
+          golesEquipo >= 1 &&
+          golesRival >= 1
+        ) {
+          partidosBTTS++;
+        }
+      }
+    );
+
+    const totalPartidos =
+      data.response.length;
 
     const promedioGoles =
-      stats.goals?.for?.average
-        ?.total || "0.0";
+      (
+        golesFavor /
+        totalPartidos
+      ).toFixed(1);
 
-    const golesEncajados =
-      stats.goals?.against
-        ?.average?.total || "0.0";
+    const promedioEncajados =
+      (
+        golesContra /
+        totalPartidos
+      ).toFixed(1);
 
-    const partidos =
-      stats.fixtures?.played
-        ?.total || 0;
+    const over25Porcentaje =
+      (
+        (partidosOver25 /
+          totalPartidos) *
+        100
+      ).toFixed(0);
 
-    const cleanSheets =
-      stats.clean_sheet?.total || 0;
-
-    const over25 =
-      parseFloat(
-        promedioGoles
-      ) > 1.5
-        ? "Alta"
-        : "Media";
-
-    const btts =
-      cleanSheets <
-      partidos / 2
-        ? "Alta"
-        : "Media";
+    const bttsPorcentaje =
+      (
+        (partidosBTTS /
+          totalPartidos) *
+        100
+      ).toFixed(0);
 
     res.status(200).json({
       promedioGoles,
-      golesEncajados,
-      over25,
-      btts
+      golesEncajados:
+        promedioEncajados,
+      over25:
+        over25Porcentaje + "%",
+      btts:
+        bttsPorcentaje + "%"
     });
   } catch (error) {
     res.status(200).json({
@@ -80,8 +124,8 @@ export default async function handler(
         "0.0",
       golesEncajados:
         "0.0",
-      over25: "Media",
-      btts: "Media"
+      over25: "0%",
+      btts: "0%"
     });
   }
 }
