@@ -26,46 +26,51 @@ export default async function handler(
     const data =
       await response.json();
 
-    if (
-      !data.response
-    ) {
+    if (!data.response) {
       return res.status(200).json({
         promedioGoles:
           "0.0",
-        over25: "0%",
-        btts: "0%"
+        golesEncajados:
+          "0.0",
+        over25: "Media",
+        btts: "Media"
       });
     }
 
     const stats =
       data.response;
 
-    const golesFavor =
-      stats.goals.for.average.total ||
-      0;
+    const promedioGoles =
+      stats.goals?.for?.average
+        ?.total || "0.0";
 
-    const golesContra =
-      stats.goals.against.average
-        .total || 0;
+    const golesEncajados =
+      stats.goals?.against
+        ?.average?.total || "0.0";
+
+    const partidos =
+      stats.fixtures?.played
+        ?.total || 0;
+
+    const cleanSheets =
+      stats.clean_sheet?.total || 0;
 
     const over25 =
-      stats.goals.for.average.total >
-      1.5
+      parseFloat(
+        promedioGoles
+      ) > 1.5
         ? "Alta"
         : "Media";
 
     const btts =
-      stats.clean_sheet.total <
-      stats.fixtures.played.total /
-        2
+      cleanSheets <
+      partidos / 2
         ? "Alta"
         : "Media";
 
     res.status(200).json({
-      promedioGoles:
-        golesFavor,
-      golesEncajados:
-        golesContra,
+      promedioGoles,
+      golesEncajados,
       over25,
       btts
     });
@@ -75,8 +80,8 @@ export default async function handler(
         "0.0",
       golesEncajados:
         "0.0",
-      over25: "0%",
-      btts: "0%"
+      over25: "Media",
+      btts: "Media"
     });
   }
 }
