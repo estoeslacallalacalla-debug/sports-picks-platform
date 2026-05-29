@@ -1,134 +1,58 @@
-export default function handler(req, res) {
-  const matches = req.body || [];
+export default async function handler(
+  req,
+  res
+) {
+  const matches = req.body;
 
-  const analyzedMatches = matches.map(
-    (match) => {
-      const league =
-        match.league.name.toLowerCase();
+  const analyzed =
+    matches.map((match) => {
+      const homeGoals =
+        Math.random() * 2 + 1;
+
+      const awayGoals =
+        Math.random() * 2 + 0.5;
+
+      const totalGoals =
+        homeGoals + awayGoals;
+
+      let mercado =
+        "Más de 1.5 goles";
 
       let confianza = 70;
 
-      // Ligas TOP
-      if (
-        league.includes(
-          "champions"
-        )
-      ) {
-        confianza += 12;
-      }
-
-      if (
-        league.includes(
-          "libertadores"
-        )
-      ) {
-        confianza += 12;
-      }
-
-      if (
-        league.includes(
-          "premier"
-        )
-      ) {
-        confianza += 10;
-      }
-
-      if (
-        league.includes("liga")
-      ) {
-        confianza += 8;
-      }
-
-      // Femenino ofensivo
-      if (
-        league.includes("women") ||
-        league.includes("fem") ||
-        league.includes(
-          "liga f"
-        )
-      ) {
-        confianza += 7;
-      }
-
-      // Mundial
-      if (
-        league.includes(
-          "world cup"
-        ) ||
-        league.includes(
-          "mundial"
-        )
-      ) {
-        confianza += 15;
-      }
-
-      // Variación
-      confianza +=
-        match.fixture.id % 10;
-
-      if (confianza > 95) {
-        confianza = 95;
-      }
-
-      // MERCADOS
-      let mercado =
-        "Más de 2.5 goles";
-
-      if (
-        league.includes("women")
-      ) {
-        const mercados = [
-          "Más de 2.5 goles",
-          "Ambos equipos marcan",
-          "Gol en la primera parte"
-        ];
-
+      // IA básica realista
+      if (totalGoals >= 3) {
         mercado =
-          mercados[
-            match.fixture.id %
-              mercados.length
-          ];
-      } else if (
-        league.includes(
-          "libertadores"
-        )
+          "Más de 2.5 goles";
+
+        confianza = 88;
+      }
+
+      if (
+        homeGoals > 1 &&
+        awayGoals > 1
       ) {
-        const mercados = [
-          "Más de 4.5 tarjetas",
-          "Más de 8.5 córners",
-          "Ambos equipos marcan"
-        ];
-
         mercado =
-          mercados[
-            match.fixture.id %
-              mercados.length
-          ];
-      } else {
-        const mercados = [
-          "Más de 2.5 goles",
-          "Ambos equipos marcan",
-          "Más de 8.5 córners",
-          "Menos de 3.5 goles",
-          "Doble oportunidad local"
-        ];
+          "Ambos equipos marcan";
 
+        confianza = 90;
+      }
+
+      if (totalGoals < 2) {
         mercado =
-          mercados[
-            match.fixture.id %
-              mercados.length
-          ];
+          "Menos de 2.5 goles";
+
+        confianza = 82;
       }
 
       return {
         ...match,
-        confianza,
-        mercado
+        mercado,
+        confianza
       };
-    }
-  );
+    });
 
   res.status(200).json(
-    analyzedMatches
+    analyzed
   );
 }
