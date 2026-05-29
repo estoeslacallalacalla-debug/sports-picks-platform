@@ -42,14 +42,12 @@ export default function Picks() {
 
       analyzedData.forEach(
         async (match) => {
-          const team =
-            match.teams.home.name;
+          const teamId =
+            match.teams.home.id;
 
           const res =
             await fetch(
-              `/api/teamStats?team=${encodeURIComponent(
-                team
-              )}`
+              `/api/teamStats?teamId=${teamId}`
             );
 
           const data =
@@ -57,7 +55,7 @@ export default function Picks() {
 
           setStats((prev) => ({
             ...prev,
-            [team]: data
+            [teamId]: data
           }));
         }
       );
@@ -159,11 +157,11 @@ export default function Picks() {
         )
         .slice(0, 10)
         .map((match) => {
-          const team =
-            match.teams.home.name;
+          const teamId =
+            match.teams.home.id;
 
           const teamStats =
-            stats[team];
+            stats[teamId];
 
           return (
             <div
