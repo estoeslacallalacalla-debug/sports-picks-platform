@@ -8,7 +8,7 @@ export default async function handler(
   const { team } = req.query;
 
   try {
-    // Buscar ID del equipo
+    // Buscar equipo
     const searchResponse =
       await fetch(
         `https://v3.football.api-sports.io/teams?search=${team}`,
@@ -27,16 +27,16 @@ export default async function handler(
       !searchData.response ||
       searchData.response.length === 0
     ) {
-      return res.status(404).json({
-        error:
-          "Equipo no encontrado"
+      return res.status(200).json({
+        resultados: [],
+        promedioGoles: "0.0"
       });
     }
 
     const teamId =
       searchData.response[0].team.id;
 
-    // Últimos partidos
+    // Últimos 5 partidos
     const fixturesResponse =
       await fetch(
         `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5`,
@@ -51,6 +51,16 @@ export default async function handler(
     const fixturesData =
       await fixturesResponse.json();
 
+    if (
+      !fixturesData.response ||
+      fixturesData.response.length === 0
+    ) {
+      return res.status(200).json({
+        resultados: [],
+        promedioGoles: "0.0"
+      });
+    }
+
     const resultados = [];
 
     let golesTotales = 0;
@@ -58,10 +68,10 @@ export default async function handler(
     fixturesData.response.forEach(
       (match) => {
         const homeGoals =
-          match.goals.home;
+          match.goals.home ?? 0;
 
         const awayGoals =
-          match.goals.away;
+          match.goals.away ?? 0;
 
         golesTotales +=
           homeGoals + awayGoals;
@@ -107,9 +117,9 @@ export default async function handler(
       promedioGoles
     });
   } catch (error) {
-    res.status(500).json({
-      error:
-        "Error obteniendo estadísticas"
+    res.status(200).json({
+      resultados: [],
+      promedioGoles: "0.0"
     });
   }
 }
