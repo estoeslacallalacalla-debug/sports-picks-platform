@@ -6,39 +6,33 @@ export default async function handler(
 
   const analyzed =
     matches.map((match) => {
-      const homeGoals =
-        Math.random() * 2 + 1;
+      const league =
+        match.league.name.toLowerCase();
 
-      const awayGoals =
-        Math.random() * 2 + 0.5;
-
-      const totalGoals =
-        homeGoals + awayGoals;
+      const isFemale =
+        league.includes("women") ||
+        league.includes("femin") ||
+        league.includes("liga f");
 
       let mercado =
         "Más de 1.5 goles";
 
-      let confianza = 70;
+      let confianza = 75;
 
-      // IA básica realista
-      if (totalGoals >= 3) {
-        mercado =
-          "Más de 2.5 goles";
+      const random =
+        match.fixture.id % 100;
 
-        confianza = 88;
-      }
-
-      if (
-        homeGoals > 1 &&
-        awayGoals > 1
-      ) {
+      if (random > 80) {
         mercado =
           "Ambos equipos marcan";
 
         confianza = 90;
-      }
+      } else if (random > 60) {
+        mercado =
+          "Más de 2.5 goles";
 
-      if (totalGoals < 2) {
+        confianza = 87;
+      } else if (random > 40) {
         mercado =
           "Menos de 2.5 goles";
 
@@ -48,7 +42,8 @@ export default async function handler(
       return {
         ...match,
         mercado,
-        confianza
+        confianza,
+        isFemale
       };
     });
 
