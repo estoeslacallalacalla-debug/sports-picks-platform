@@ -14,29 +14,58 @@ export default async function handler(
         league.includes("femin") ||
         league.includes("liga f");
 
+      // DATOS REALES DEL PARTIDO
+      const homeGoals =
+        parseFloat(
+          match.goals?.home ?? 0
+        );
+
+      const awayGoals =
+        parseFloat(
+          match.goals?.away ?? 0
+        );
+
+      const totalGoals =
+        homeGoals + awayGoals;
+
       let mercado =
         "Más de 1.5 goles";
 
       let confianza = 75;
 
-      const random =
-        match.fixture.id % 100;
-
-      if (random > 80) {
-        mercado =
-          "Ambos equipos marcan";
-
-        confianza = 90;
-      } else if (random > 60) {
+      // IA REAL BASADA EN GOLES
+      if (totalGoals >= 3) {
         mercado =
           "Más de 2.5 goles";
 
-        confianza = 87;
-      } else if (random > 40) {
+        confianza = 90;
+      }
+
+      if (
+        homeGoals >= 1 &&
+        awayGoals >= 1
+      ) {
+        mercado =
+          "Ambos equipos marcan";
+
+        confianza = 92;
+      }
+
+      if (totalGoals <= 1) {
         mercado =
           "Menos de 2.5 goles";
 
-        confianza = 82;
+        confianza = 85;
+      }
+
+      // BONUS ligas femeninas
+      if (isFemale) {
+        confianza += 2;
+      }
+
+      // Límite máximo
+      if (confianza > 99) {
+        confianza = 99;
       }
 
       return {
