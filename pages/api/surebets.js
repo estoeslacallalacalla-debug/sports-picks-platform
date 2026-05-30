@@ -1,62 +1,102 @@
-export default function handler(req, res) {
-  const surebets = [
-    {
-      partido:
-        "Real Madrid vs Barcelona",
+export default async function handler(
+  req,
+  res
+) {
+  try {
+    const response =
+      await fetch(
+        "https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h&apiKey=TU_API_KEY"
+      );
 
-      mercado:
-        "1X2",
+    const data =
+      await response.json();
 
-      casa1: "Bet365",
-      cuota1: 2.20,
+    const surebets = [];
 
-      casa2: "Bwin",
-      cuota2: 3.60,
+    data.forEach((match) => {
+      if (
+        !match.bookmakers ||
+        match.bookmakers.length < 2
+      )
+        return;
 
-      casa3: "1XBET",
-      cuota3: 4.50
-    },
+      let bestHome = 0;
+      let bestAway = 0;
 
-    {
-      partido:
-        "Manchester City vs Arsenal",
+      match.bookmakers.forEach(
+        (bookmaker) => {
+          const market =
+            bookmaker.markets?.[0];
 
-      mercado:
-        "Más/Menos goles",
+          if (!market) return;
 
-      casa1: "Betano",
-      cuota1: 2.05,
+          market.outcomes.forEach(
+            (outcome) => {
+              if (
+                outcome.name ===
+                match.home_team
+              ) {
+                if (
+                  outcome.price >
+                  bestHome
+                ) {
+                  bestHome =
+                    outcome.price;
+                }
+              }
 
-      casa2: "William Hill",
-      cuota2: 2.10,
+              if (
+                outcome.name ===
+                match.away_team
+              ) {
+                if (
+                  outcome.price >
+                  bestAway
+                ) {
+                  bestAway =
+                    outcome.price;
+                }
+              }
+            }
+          );
+        }
+      );
 
-      casa3: "888sport",
-      cuota3: 4.10
-    }
-  ];
+      if (
+        bestHome > 0 &&
+        bestAway > 0
+      ) {
+        const total =
+          1 / bestHome +
+          1 / bestAway;
 
-  const analizadas =
-    surebets.map((s) => {
-      const inversa =
-        1 / s.cuota1 +
-        1 / s.cuota2 +
-        1 / s.cuota3;
-
-      const ganancia =
-        (
-          (1 - inversa) *
-          100
-        ).toFixed(2);
-
-      return {
-        ...s,
-        surebet:
-          inversa < 1,
-        ganancia
-      };
+        if (total < 1) {
+          surebets.push({
+            partido:
+              `${match.home_team} vs ${match.away_team}`,
+            cuotaLocal:
+              bestHome,
+            cuotaVisitante:
+              bestAway,
+            beneficio:
+              (
+                (1 - total) *
+                100
+              ).toFixed(2) + "%"
+          });
+        }
+      }
     });
 
-  res.status(200).json(
-    analizadas
-  );
+    res.status(200).json({
+      total:
+        surebets.length,
+      surebets
+    });
+  } catch (error) {
+    res.status(500).json({
+      error:
+        error.message
+    });
+  }
 }
