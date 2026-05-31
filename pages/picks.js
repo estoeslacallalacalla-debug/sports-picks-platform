@@ -11,6 +11,9 @@ export default function Picks() {
   const [surebets, setSurebets] =
     useState([]);
 
+  const [filter, setFilter] =
+    useState("all");
+
   useEffect(() => {
 
     fetch("/api/analisis-ia")
@@ -54,6 +57,18 @@ export default function Picks() {
     return "#ef4444";
   };
 
+  const totalTop =
+    picks.filter(
+      p =>
+        p.confianza >= 90
+    ).length;
+
+  const totalAlta =
+    picks.filter(
+      p =>
+        p.confianza >= 80
+    ).length;
+
   return (
 
     <div
@@ -75,37 +90,182 @@ export default function Picks() {
         style={{
           textAlign:
             "center",
-          marginBottom:
-            "40px",
           color:
             "#38bdf8",
           fontSize:
-            "40px"
+            "40px",
+          marginBottom:
+            "30px"
         }}
       >
         🔥 SPORTS PICKS IA PRO
       </h1>
 
-      <section
+      <div
         style={{
+          display:
+            "flex",
+          gap:
+            "15px",
           marginBottom:
-            "60px"
+            "30px",
+          flexWrap:
+            "wrap"
         }}
       >
 
-        <h2
+        <button
+          onClick={() =>
+            setFilter("all")
+          }
+        >
+          TODOS
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("top")
+          }
+        >
+          PICKS TOP
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("live")
+          }
+        >
+          LIVE
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("surebets")
+          }
+        >
+          SUREBETS
+        </button>
+
+      </div>
+
+      <div
+        style={{
+          display:
+            "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(220px,1fr))",
+          gap:
+            "20px",
+          marginBottom:
+            "40px"
+        }}
+      >
+
+        <div
           style={{
-            color:
-              "#22c55e",
-            marginBottom:
-              "20px"
+            background:
+              "#0f172a",
+            padding:
+              "20px",
+            borderRadius:
+              "15px",
+            border:
+              "2px solid #22c55e"
           }}
         >
-          🚀 PICKS IA
-        </h2>
 
-        {
-          picks.map(
+          <h3>
+            🚀 PICKS TOP
+          </h3>
+
+          <h1>
+            {totalTop}
+          </h1>
+
+        </div>
+
+        <div
+          style={{
+            background:
+              "#0f172a",
+            padding:
+              "20px",
+            borderRadius:
+              "15px",
+            border:
+              "2px solid #f59e0b"
+          }}
+        >
+
+          <h3>
+            ⭐ PICKS ALTOS
+          </h3>
+
+          <h1>
+            {totalAlta}
+          </h1>
+
+        </div>
+
+        <div
+          style={{
+            background:
+              "#0f172a",
+            padding:
+              "20px",
+            borderRadius:
+              "15px",
+            border:
+              "2px solid #38bdf8"
+          }}
+        >
+
+          <h3>
+            🔴 LIVE
+          </h3>
+
+          <h1>
+            {livePicks.length}
+          </h1>
+
+        </div>
+
+        <div
+          style={{
+            background:
+              "#0f172a",
+            padding:
+              "20px",
+            borderRadius:
+              "15px",
+            border:
+              "2px solid #f43f5e"
+          }}
+        >
+
+          <h3>
+            💰 SUREBETS
+          </h3>
+
+          <h1>
+            {surebets.length}
+          </h1>
+
+        </div>
+
+      </div>
+
+      {
+        (filter === "all" ||
+        filter === "top") &&
+
+        picks
+          .filter(
+            p =>
+              filter !== "top" ||
+              p.confianza >= 90
+          )
+          .map(
             (
               pick,
               index
@@ -129,9 +289,9 @@ export default function Picks() {
                 }}
               >
 
-                <h3>
+                <h2>
                   ⚽ {pick.partido}
-                </h3>
+                </h2>
 
                 <p>
                   🏆 {pick.liga}
@@ -142,146 +302,61 @@ export default function Picks() {
                 </p>
 
                 <p>
-                  📊 Promedio goles:
+                  ⭐ Calidad:
                   {" "}
-                  {pick.promedio}
+                  {pick.calidad}
                 </p>
 
                 <p>
-                  ⚔️ Ataque local:
+                  📈 Forma local:
                   {" "}
-                  {pick.golesLocal}
+                  {pick.formaHome}
                 </p>
 
                 <p>
-                  ⚔️ Ataque visitante:
+                  📈 Forma visitante:
                   {" "}
-                  {pick.golesVisitante}
+                  {pick.formaAway}
                 </p>
 
                 <div
                   style={{
+                    width:
+                      "100%",
+                    height:
+                      "12px",
+                    background:
+                      "#1e293b",
+                    borderRadius:
+                      "20px",
+                    overflow:
+                      "hidden",
                     marginTop:
-                      "15px"
+                      "10px"
                   }}
                 >
 
                   <div
                     style={{
-                      display:
-                        "flex",
-                      justifyContent:
-                        "space-between"
-                    }}
-                  >
-
-                    <span>
-                      🚀 Confianza
-                    </span>
-
-                    <span>
-                      {pick.confianza}%
-                    </span>
-
-                  </div>
-
-                  <div
-                    style={{
                       width:
-                        "100%",
+                        `${pick.confianza}%`,
                       height:
-                        "12px",
+                        "100%",
                       background:
-                        "#1e293b",
-                      borderRadius:
-                        "20px",
-                      overflow:
-                        "hidden",
-                      marginTop:
-                        "5px"
+                        getColor(
+                          pick.confianza
+                        )
                     }}
-                  >
-
-                    <div
-                      style={{
-                        width:
-                          `${pick.confianza}%`,
-                        height:
-                          "100%",
-                        background:
-                          getColor(
-                            pick.confianza
-                          )
-                      }}
-                    />
-
-                  </div>
+                  />
 
                 </div>
 
-              </div>
-            )
-          )
-        }
-
-      </section>
-
-      <section
-        style={{
-          marginBottom:
-            "60px"
-        }}
-      >
-
-        <h2
-          style={{
-            color:
-              "#f59e0b",
-            marginBottom:
-              "20px"
-          }}
-        >
-          🔴 PICKS LIVE
-        </h2>
-
-        {
-          livePicks.map(
-            (
-              pick,
-              index
-            ) => (
-
-              <div
-                key={index}
-                style={{
-                  background:
-                    "#0f172a",
-                  padding:
-                    "20px",
-                  borderRadius:
-                    "15px",
-                  marginBottom:
-                    "20px",
-                  border:
-                    "2px solid #f59e0b"
-                }}
-              >
-
-                <h3>
-                  ⚽ {pick.partido}
-                </h3>
-
-                <p>
-                  ⏱️ Minuto:
-                  {" "}
-                  {pick.minuto}
-                </p>
-
-                <p>
-                  🎯 {pick.mercado}
-                </p>
-
-                <p>
+                <p
+                  style={{
+                    marginTop:
+                      "10px"
+                  }}
+                >
                   🚀 Confianza:
                   {" "}
                   {pick.confianza}%
@@ -290,68 +365,103 @@ export default function Picks() {
               </div>
             )
           )
-        }
+      }
 
-      </section>
+      {
+        filter === "live" &&
 
-      <section>
+        livePicks.map(
+          (
+            pick,
+            index
+          ) => (
 
-        <h2
-          style={{
-            color:
-              "#f43f5e",
-            marginBottom:
-              "20px"
-          }}
-        >
-          💰 TRUE SUREBETS
-        </h2>
+            <div
+              key={index}
+              style={{
+                background:
+                  "#0f172a",
+                padding:
+                  "20px",
+                borderRadius:
+                  "15px",
+                marginBottom:
+                  "20px",
+                border:
+                  "2px solid #f59e0b"
+              }}
+            >
 
-        {
-          surebets.map(
-            (
-              bet,
-              index
-            ) => (
+              <h2>
+                ⚽ {pick.partido}
+              </h2>
 
-              <div
-                key={index}
-                style={{
-                  background:
-                    "#0f172a",
-                  padding:
-                    "20px",
-                  borderRadius:
-                    "15px",
-                  marginBottom:
-                    "20px",
-                  border:
-                    "2px solid #f43f5e"
-                }}
-              >
+              <p>
+                ⏱️ Minuto:
+                {" "}
+                {pick.minuto}
+              </p>
 
-                <h3>
-                  ⚽ {bet.partido}
-                </h3>
+              <p>
+                🎯 {pick.mercado}
+              </p>
 
-                <p>
-                  📈 Beneficio:
-                  {" "}
-                  {bet.beneficio}
-                </p>
+              <p>
+                🚀 Confianza:
+                {" "}
+                {pick.confianza}%
+              </p>
 
-                <p>
-                  💵 Ganancia:
-                  {" "}
-                  {bet.ganancia}
-                </p>
-
-              </div>
-            )
+            </div>
           )
-        }
+        )
+      }
 
-      </section>
+      {
+        filter === "surebets" &&
+
+        surebets.map(
+          (
+            bet,
+            index
+          ) => (
+
+            <div
+              key={index}
+              style={{
+                background:
+                  "#0f172a",
+                padding:
+                  "20px",
+                borderRadius:
+                  "15px",
+                marginBottom:
+                  "20px",
+                border:
+                  "2px solid #f43f5e"
+              }}
+            >
+
+              <h2>
+                ⚽ {bet.partido}
+              </h2>
+
+              <p>
+                📈 Beneficio:
+                {" "}
+                {bet.beneficio}
+              </p>
+
+              <p>
+                💵 Ganancia:
+                {" "}
+                {bet.ganancia}
+              </p>
+
+            </div>
+          )
+        )
+      }
 
     </div>
   );
