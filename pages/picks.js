@@ -14,6 +14,9 @@ export default function Picks() {
   const [filter, setFilter] =
     useState("all");
 
+  const [favorites, setFavorites] =
+    useState([]);
+
   useEffect(() => {
 
     fetch("/api/analisis-ia")
@@ -57,6 +60,32 @@ export default function Picks() {
     return "#ef4444";
   };
 
+  const toggleFavorite = (
+    partido
+  ) => {
+
+    if (
+      favorites.includes(
+        partido
+      )
+    ) {
+
+      setFavorites(
+        favorites.filter(
+          f =>
+            f !== partido
+        )
+      );
+
+    } else {
+
+      setFavorites([
+        ...favorites,
+        partido
+      ]);
+    }
+  };
+
   const totalTop =
     picks.filter(
       p =>
@@ -68,6 +97,28 @@ export default function Picks() {
       p =>
         p.confianza >= 80
     ).length;
+
+  const rankingLigas = {};
+
+  picks.forEach(
+    pick => {
+
+      if (
+        !rankingLigas[
+          pick.liga
+        ]
+      ) {
+
+        rankingLigas[
+          pick.liga
+        ] = 0;
+      }
+
+      rankingLigas[
+        pick.liga
+      ] += 1;
+    }
+  );
 
   return (
 
@@ -93,7 +144,7 @@ export default function Picks() {
           color:
             "#38bdf8",
           fontSize:
-            "40px",
+            "42px",
           marginBottom:
             "30px"
         }}
@@ -106,7 +157,7 @@ export default function Picks() {
           display:
             "flex",
           gap:
-            "15px",
+            "12px",
           marginBottom:
             "30px",
           flexWrap:
@@ -128,6 +179,14 @@ export default function Picks() {
           }
         >
           PICKS TOP
+        </button>
+
+        <button
+          onClick={() =>
+            setFilter("favorites")
+          }
+        >
+          FAVORITOS
         </button>
 
         <button
@@ -168,9 +227,11 @@ export default function Picks() {
             padding:
               "20px",
             borderRadius:
-              "15px",
+              "20px",
             border:
-              "2px solid #22c55e"
+              "2px solid #22c55e",
+            boxShadow:
+              "0 0 20px rgba(34,197,94,0.3)"
           }}
         >
 
@@ -191,9 +252,11 @@ export default function Picks() {
             padding:
               "20px",
             borderRadius:
-              "15px",
+              "20px",
             border:
-              "2px solid #f59e0b"
+              "2px solid #f59e0b",
+            boxShadow:
+              "0 0 20px rgba(245,158,11,0.3)"
           }}
         >
 
@@ -214,9 +277,11 @@ export default function Picks() {
             padding:
               "20px",
             borderRadius:
-              "15px",
+              "20px",
             border:
-              "2px solid #38bdf8"
+              "2px solid #38bdf8",
+            boxShadow:
+              "0 0 20px rgba(56,189,248,0.3)"
           }}
         >
 
@@ -237,9 +302,11 @@ export default function Picks() {
             padding:
               "20px",
             borderRadius:
-              "15px",
+              "20px",
             border:
-              "2px solid #f43f5e"
+              "2px solid #f43f5e",
+            boxShadow:
+              "0 0 20px rgba(244,63,94,0.3)"
           }}
         >
 
@@ -255,15 +322,74 @@ export default function Picks() {
 
       </div>
 
+      <div
+        style={{
+          background:
+            "#0f172a",
+          padding:
+            "20px",
+          borderRadius:
+            "20px",
+          marginBottom:
+            "40px"
+        }}
+      >
+
+        <h2>
+          🏆 Ranking ligas
+        </h2>
+
+        {
+          Object.entries(
+            rankingLigas
+          ).map(
+            (
+              liga,
+              index
+            ) => (
+
+              <p key={index}>
+                {liga[0]}
+                {" — "}
+                {liga[1]} picks
+              </p>
+            )
+          )
+        }
+
+      </div>
+
       {
         (filter === "all" ||
-        filter === "top") &&
+        filter === "top" ||
+        filter === "favorites") &&
 
         picks
           .filter(
-            p =>
-              filter !== "top" ||
-              p.confianza >= 90
+            p => {
+
+              if (
+                filter ===
+                "top"
+              ) {
+
+                return (
+                  p.confianza >= 90
+                );
+              }
+
+              if (
+                filter ===
+                "favorites"
+              ) {
+
+                return favorites.includes(
+                  p.partido
+                );
+              }
+
+              return true;
+            }
           )
           .map(
             (
@@ -279,19 +405,56 @@ export default function Picks() {
                   padding:
                     "20px",
                   borderRadius:
-                    "15px",
+                    "20px",
                   marginBottom:
                     "20px",
                   border:
                     `2px solid ${getColor(
                       pick.confianza
-                    )}`
+                    )}`,
+                  transition:
+                    "0.3s",
+                  boxShadow:
+                    "0 0 20px rgba(0,0,0,0.4)"
                 }}
               >
 
-                <h2>
-                  ⚽ {pick.partido}
-                </h2>
+                <div
+                  style={{
+                    display:
+                      "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems:
+                      "center"
+                  }}
+                >
+
+                  <h2>
+                    ⚽ {pick.partido}
+                  </h2>
+
+                  <button
+                    onClick={() =>
+                      toggleFavorite(
+                        pick.partido
+                      )
+                    }
+                  >
+
+                    {
+                      favorites.includes(
+                        pick.partido
+                      )
+
+                        ? "⭐"
+
+                        : "☆"
+                    }
+
+                  </button>
+
+                </div>
 
                 <p>
                   🏆 {pick.liga}
@@ -365,102 +528,6 @@ export default function Picks() {
               </div>
             )
           )
-      }
-
-      {
-        filter === "live" &&
-
-        livePicks.map(
-          (
-            pick,
-            index
-          ) => (
-
-            <div
-              key={index}
-              style={{
-                background:
-                  "#0f172a",
-                padding:
-                  "20px",
-                borderRadius:
-                  "15px",
-                marginBottom:
-                  "20px",
-                border:
-                  "2px solid #f59e0b"
-              }}
-            >
-
-              <h2>
-                ⚽ {pick.partido}
-              </h2>
-
-              <p>
-                ⏱️ Minuto:
-                {" "}
-                {pick.minuto}
-              </p>
-
-              <p>
-                🎯 {pick.mercado}
-              </p>
-
-              <p>
-                🚀 Confianza:
-                {" "}
-                {pick.confianza}%
-              </p>
-
-            </div>
-          )
-        )
-      }
-
-      {
-        filter === "surebets" &&
-
-        surebets.map(
-          (
-            bet,
-            index
-          ) => (
-
-            <div
-              key={index}
-              style={{
-                background:
-                  "#0f172a",
-                padding:
-                  "20px",
-                borderRadius:
-                  "15px",
-                marginBottom:
-                  "20px",
-                border:
-                  "2px solid #f43f5e"
-              }}
-            >
-
-              <h2>
-                ⚽ {bet.partido}
-              </h2>
-
-              <p>
-                📈 Beneficio:
-                {" "}
-                {bet.beneficio}
-              </p>
-
-              <p>
-                💵 Ganancia:
-                {" "}
-                {bet.ganancia}
-              </p>
-
-            </div>
-          )
-        )
       }
 
     </div>
