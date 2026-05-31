@@ -36,7 +36,8 @@ export default async function handler(
 
     const picks = [];
 
-    for (const partido of partidos.slice(0, 10)) {
+    for (const partido of partidos.slice(0, 15)) {
+
       const homeTeam =
         partido.teams.home;
 
@@ -80,8 +81,7 @@ export default async function handler(
       if (
         !homeStats ||
         !awayStats
-      )
-        continue;
+      ) continue;
 
       const homeGoals =
         parseFloat(
@@ -94,6 +94,20 @@ export default async function handler(
         parseFloat(
           awayStats.goals
             ?.for?.total
+            ?.total || 0
+        );
+
+      const homeAgainst =
+        parseFloat(
+          homeStats.goals
+            ?.against?.total
+            ?.total || 0
+        );
+
+      const awayAgainst =
+        parseFloat(
+          awayStats.goals
+            ?.against?.total
             ?.total || 0
         );
 
@@ -121,6 +135,18 @@ export default async function handler(
           awayGames
         ).toFixed(2);
 
+      const encajadosHome =
+        (
+          homeAgainst /
+          homeGames
+        ).toFixed(2);
+
+      const encajadosAway =
+        (
+          awayAgainst /
+          awayGames
+        ).toFixed(2);
+
       const promedioTotal =
         (
           parseFloat(
@@ -131,12 +157,28 @@ export default async function handler(
           )
         ).toFixed(2);
 
-      let mercado =
-        "Ambos marcan";
+      let mercado = "";
+      let confianza = 0;
 
-      let confianza = 75;
+      const diferencia =
+        Math.abs(
+          parseFloat(
+            promedioHome
+          ) -
+          parseFloat(
+            promedioAway
+          )
+        );
 
       if (
+        promedioTotal >= 4
+      ) {
+        mercado =
+          "Over 3.5 goles";
+        confianza = 95;
+      }
+
+      else if (
         promedioTotal >= 3
       ) {
         mercado =
@@ -144,28 +186,113 @@ export default async function handler(
         confianza = 90;
       }
 
-      if (
-        promedioTotal >= 4
+      else if (
+        promedioTotal >= 2
       ) {
-        confianza = 95;
+        mercado =
+          "Over 1.5 goles";
+        confianza = 82;
+      }
+
+      else {
+        mercado =
+          "Menos de 2.5 goles";
+        confianza = 75;
+      }
+
+      if (
+        diferencia >= 1.5
+      ) {
+
+        if (
+          parseFloat(
+            promedioHome
+          ) >
+          parseFloat(
+            promedioAway
+          )
+        ) {
+
+          mercado =
+            `${homeTeam.name} gana`;
+
+          confianza = 88;
+
+        } else {
+
+          mercado =
+            `${awayTeam.name} gana`;
+
+          confianza = 88;
+        }
+      }
+
+      if (
+        parseFloat(
+          promedioHome
+        ) >= 1.2 &&
+        parseFloat(
+          promedioAway
+        ) >= 1.2
+      ) {
+
+        mercado =
+          "Ambos marcan";
+
+        confianza = 86;
+      }
+
+      if (
+        parseFloat(
+          encajadosHome
+        ) >= 1.5 &&
+        parseFloat(
+          encajadosAway
+        ) >= 1.5
+      ) {
+
+        mercado =
+          "Over 2.5 goles";
+
+        confianza = 92;
       }
 
       const pick = {
+
         liga:
           partido.league.name,
+
         partido:
           `${homeTeam.name} vs ${awayTeam.name}`,
+
         mercado,
+
         confianza,
+
         promedio:
-          promedioTotal
+          promedioTotal,
+
+        golesLocal:
+          promedioHome,
+
+        golesVisitante:
+          promedioAway,
+
+        encajadosLocal:
+          encajadosHome,
+
+        encajadosVisitante:
+          encajadosAway
       };
 
       picks.push(pick);
 
-      if (confianza >= 90) {
+      if (
+        confianza >= 90
+      ) {
+
         const mensaje =
-          `
+`
 🔥 PICK IA DETECTADO
 
 🏆 ${pick.liga}
@@ -178,6 +305,18 @@ ${pick.mercado}
 📊 Promedio goles:
 ${pick.promedio}
 
+⚔️ Ataque local:
+${pick.golesLocal}
+
+⚔️ Ataque visitante:
+${pick.golesVisitante}
+
+🛡️ Encajados local:
+${pick.encajadosLocal}
+
+🛡️ Encajados visitante:
+${pick.encajadosVisitante}
+
 🚀 Confianza:
 ${pick.confianza}%
 `;
@@ -186,13 +325,16 @@ ${pick.confianza}%
           `https://api.telegram.org/bot${telegramToken}/sendMessage`,
           {
             method: "POST",
+
             headers: {
               "Content-Type":
                 "application/json"
             },
+
             body: JSON.stringify({
               chat_id:
                 telegramChat,
+
               text:
                 mensaje
             })
@@ -204,9 +346,12 @@ ${pick.confianza}%
     res.status(200).json({
       total:
         picks.length,
+
       picks
     });
+
   } catch (error) {
+
     res.status(500).json({
       error:
         error.message
