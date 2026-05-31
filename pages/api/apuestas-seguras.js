@@ -37,6 +37,11 @@ export default async function handler(
         bookie: ""
       };
 
+      let bestDraw = {
+        price: 0,
+        bookie: ""
+      };
+
       let bestAway = {
         price: 0,
         bookie: ""
@@ -74,7 +79,26 @@ export default async function handler(
             }
           }
 
-          if (
+          else if (
+            outcome.name === "Draw"
+          ) {
+
+            if (
+              outcome.price >
+              bestDraw.price
+            ) {
+
+              bestDraw = {
+                price:
+                  outcome.price,
+
+                bookie:
+                  bookmaker.title
+              };
+            }
+          }
+
+          else if (
             outcome.name ===
             match.away_team
           ) {
@@ -98,12 +122,16 @@ export default async function handler(
 
       if (
         bestHome.price > 0 &&
+        bestDraw.price > 0 &&
         bestAway.price > 0
       ) {
 
         const total =
           (
             1 / bestHome.price
+          ) +
+          (
+            1 / bestDraw.price
           ) +
           (
             1 / bestAway.price
@@ -120,14 +148,21 @@ export default async function handler(
               ) * 100
             ).toFixed(2);
 
-          const apuestaLocal =
+          const apuestaHome =
             (
               bankroll /
               bestHome.price /
               total
             ).toFixed(2);
 
-          const apuestaVisitante =
+          const apuestaDraw =
+            (
+              bankroll /
+              bestDraw.price /
+              total
+            ).toFixed(2);
+
+          const apuestaAway =
             (
               bankroll /
               bestAway.price /
@@ -146,18 +181,8 @@ export default async function handler(
             partido:
               `${match.home_team} vs ${match.away_team}`,
 
-            local:
-              bestHome,
-
-            visitante:
-              bestAway,
-
             beneficio:
               `${beneficio}%`,
-
-            apuestaLocal,
-
-            apuestaVisitante,
 
             ganancia:
               `${ganancia}€`
@@ -170,14 +195,16 @@ export default async function handler(
           if (
             parseFloat(
               beneficio
-            ) >= 2
+            ) >= 1.5
           ) {
 
             const mensaje =
 `
-🔥 SUREBET REAL DETECTADA
+🔥 TRUE SUREBET DETECTADA
 
-⚽ ${surebet.partido}
+⚽ ${match.home_team} vs ${match.away_team}
+
+━━━━━━━━━━━━
 
 🏠 LOCAL
 Cuota:
@@ -187,7 +214,19 @@ Casa:
 ${bestHome.bookie}
 
 💰 Apostar:
-${apuestaLocal}€
+${apuestaHome}€
+
+━━━━━━━━━━━━
+
+🤝 EMPATE
+Cuota:
+${bestDraw.price}
+
+Casa:
+${bestDraw.bookie}
+
+💰 Apostar:
+${apuestaDraw}€
 
 ━━━━━━━━━━━━
 
@@ -199,7 +238,7 @@ Casa:
 ${bestAway.bookie}
 
 💰 Apostar:
-${apuestaVisitante}€
+${apuestaAway}€
 
 ━━━━━━━━━━━━
 
