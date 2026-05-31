@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/analisis-ia",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/apuestas-seguras",
+      "schedule": "*/20 * * * *"
+    }
+  ]
+}
