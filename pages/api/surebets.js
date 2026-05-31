@@ -3,6 +3,7 @@ export default async function handler(
   res
 ) {
   try {
+
     const apiKey =
       process.env.ODDS_API_KEY;
 
@@ -11,6 +12,8 @@ export default async function handler(
 
     const telegramChat =
       "@sportspicksia2026";
+
+    const bankroll = 100;
 
     const response =
       await fetch(
@@ -23,11 +26,11 @@ export default async function handler(
     const surebets = [];
 
     for (const match of data) {
+
       if (
         !match.bookmakers ||
         match.bookmakers.length < 2
-      )
-        continue;
+      ) continue;
 
       let bestHome = {
         price: 0,
@@ -40,6 +43,7 @@ export default async function handler(
       };
 
       for (const bookmaker of match.bookmakers) {
+
         const market =
           bookmaker.markets?.find(
             (m) =>
@@ -49,17 +53,21 @@ export default async function handler(
         if (!market) continue;
 
         for (const outcome of market.outcomes) {
+
           if (
             outcome.name ===
             match.home_team
           ) {
+
             if (
               outcome.price >
               bestHome.price
             ) {
+
               bestHome = {
                 price:
                   outcome.price,
+
                 bookie:
                   bookmaker.title
               };
@@ -70,13 +78,16 @@ export default async function handler(
             outcome.name ===
             match.away_team
           ) {
+
             if (
               outcome.price >
               bestAway.price
             ) {
+
               bestAway = {
                 price:
                   outcome.price,
+
                 bookie:
                   bookmaker.title
               };
@@ -89,26 +100,67 @@ export default async function handler(
         bestHome.price > 0 &&
         bestAway.price > 0
       ) {
-        const total =
-          1 / bestHome.price +
-          1 / bestAway.price;
 
-        if (total < 1) {
+        const total =
+          (
+            1 / bestHome.price
+          ) +
+          (
+            1 / bestAway.price
+          );
+
+        if (
+          total < 1
+        ) {
+
           const beneficio =
             (
-              (1 - total) *
-              100
+              (
+                1 - total
+              ) * 100
+            ).toFixed(2);
+
+          const apuestaLocal =
+            (
+              bankroll /
+              bestHome.price /
+              total
+            ).toFixed(2);
+
+          const apuestaVisitante =
+            (
+              bankroll /
+              bestAway.price /
+              total
+            ).toFixed(2);
+
+          const ganancia =
+            (
+              (
+                bankroll / total
+              ) - bankroll
             ).toFixed(2);
 
           const surebet = {
+
             partido:
               `${match.home_team} vs ${match.away_team}`,
+
             local:
               bestHome,
+
             visitante:
               bestAway,
+
             beneficio:
-              `${beneficio}%`
+              `${beneficio}%`,
+
+            apuestaLocal,
+
+            apuestaVisitante,
+
+            ganancia:
+              `${ganancia}€`
           };
 
           surebets.push(
@@ -120,33 +172,58 @@ export default async function handler(
               beneficio
             ) >= 2
           ) {
+
             const mensaje =
-              `
-🔥 SUREBET DETECTADA
+`
+🔥 SUREBET REAL DETECTADA
 
 ⚽ ${surebet.partido}
 
-🏠 Local:
-${bestHome.price} (${bestHome.bookie})
+🏠 LOCAL
+Cuota:
+${bestHome.price}
 
-✈️ Visitante:
-${bestAway.price} (${bestAway.bookie})
+Casa:
+${bestHome.bookie}
 
-💰 Beneficio:
+💰 Apostar:
+${apuestaLocal}€
+
+━━━━━━━━━━━━
+
+✈️ VISITANTE
+Cuota:
+${bestAway.price}
+
+Casa:
+${bestAway.bookie}
+
+💰 Apostar:
+${apuestaVisitante}€
+
+━━━━━━━━━━━━
+
+📈 Beneficio:
 ${beneficio}%
+
+💵 Ganancia segura:
+${ganancia}€
 `;
 
             await fetch(
               `https://api.telegram.org/bot${telegramToken}/sendMessage`,
               {
                 method: "POST",
+
                 headers: {
                   "Content-Type":
                     "application/json"
                 },
+
                 body: JSON.stringify({
                   chat_id:
                     telegramChat,
+
                   text:
                     mensaje
                 })
@@ -158,11 +235,15 @@ ${beneficio}%
     }
 
     res.status(200).json({
+
       total:
         surebets.length,
+
       surebets
     });
+
   } catch (error) {
+
     res.status(500).json({
       error:
         error.message
