@@ -1,281 +1,267 @@
 import { useEffect, useState } from "react";
 
 export default function Picks() {
-  const [matches, setMatches] =
+
+  const [picks, setPicks] =
     useState([]);
 
-  const [stats, setStats] =
-    useState({});
+  const [livePicks, setLivePicks] =
+    useState([]);
 
-  const [
-    soloAltaConfianza,
-    setSoloAltaConfianza
-  ] = useState(false);
-
-  const [filter, setFilter] =
-    useState("all");
+  const [surebets, setSurebets] =
+    useState([]);
 
   useEffect(() => {
-    async function cargarPicks() {
-      const prematch =
-        await fetch("/api/prematch");
 
-      const prematchData =
-        await prematch.json();
-
-      const analyzed =
-        await fetch("/api/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body: JSON.stringify(
-            prematchData.response || []
-          )
-        });
-
-      const analyzedData =
-        await analyzed.json();
-
-      setMatches(analyzedData);
-
-      analyzedData.forEach(
-        async (match) => {
-          const teamId =
-            match.teams.home.id;
-
-          const leagueId =
-            match.league.id;
-
-          const season =
-            match.league.season;
-
-          const res =
-            await fetch(
-              `/api/teamStats?teamId=${teamId}&leagueId=${leagueId}&season=${season}`
-            );
-
-          const data =
-            await res.json();
-
-          setStats((prev) => ({
-            ...prev,
-            [teamId]: data
-          }));
-        }
+    fetch("/api/analisis-ia")
+      .then(res => res.json())
+      .then(data =>
+        setPicks(
+          data.picks || []
+        )
       );
-    }
 
-    cargarPicks();
+    fetch("/api/live-picks")
+      .then(res => res.json())
+      .then(data =>
+        setLivePicks(
+          data.picks || []
+        )
+      );
+
+    fetch("/api/apuestas-seguras")
+      .then(res => res.json())
+      .then(data =>
+        setSurebets(
+          data.surebets || []
+        )
+      );
+
   }, []);
 
   return (
+
     <div
       style={{
-        backgroundColor: "#eaf2ff",
-        minHeight: "100vh",
-        padding: "20px",
-        fontFamily: "Arial"
+        background:
+          "#0f172a",
+        minHeight:
+          "100vh",
+        padding:
+          "20px",
+        color:
+          "white",
+        fontFamily:
+          "Arial"
       }}
     >
+
       <h1
         style={{
-          color: "#2563eb"
+          textAlign:
+            "center",
+          marginBottom:
+            "40px",
+          color:
+            "#38bdf8"
         }}
       >
-        🔥 Picks IA REAL
+        🔥 SPORTS PICKS IA
       </h1>
 
-      <div
+      <section
         style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "20px",
-          flexWrap: "wrap"
+          marginBottom:
+            "50px"
         }}
       >
-        <button
-          onClick={() =>
-            setFilter("all")
-          }
+
+        <h2
+          style={{
+            color:
+              "#22c55e"
+          }}
         >
-          🌐 Todas
-        </button>
+          🚀 PICKS IA
+        </h2>
 
-        <button
-          onClick={() =>
-            setFilter("male")
-          }
-        >
-          ⚽ Masculino
-        </button>
+        {
+          picks.map(
+            (
+              pick,
+              index
+            ) => (
 
-        <button
-          onClick={() =>
-            setFilter("female")
-          }
-        >
-          👩 Femenino
-        </button>
+              <div
+                key={index}
+                style={{
+                  background:
+                    "#1e293b",
+                  padding:
+                    "20px",
+                  borderRadius:
+                    "12px",
+                  marginBottom:
+                    "15px",
+                  border:
+                    "1px solid #334155"
+                }}
+              >
 
-        <button
-          onClick={() =>
-            setSoloAltaConfianza(
-              !soloAltaConfianza
-            )
-          }
-        >
-          ⭐ Alta confianza
-        </button>
-      </div>
+                <h3>
+                  ⚽ {pick.partido}
+                </h3>
 
-      {matches
-        .filter((match) => {
-          if (
-            filter === "female" &&
-            !match.isFemale
-          ) {
-            return false;
-          }
-
-          if (
-            filter === "male" &&
-            match.isFemale
-          ) {
-            return false;
-          }
-
-          if (
-            soloAltaConfianza &&
-            match.confianza < 85
-          ) {
-            return false;
-          }
-
-          return true;
-        })
-        .sort(
-          (a, b) =>
-            b.confianza - a.confianza
-        )
-        .slice(0, 15)
-        .map((match) => {
-          const teamId =
-            match.teams.home.id;
-
-          const teamStats =
-            stats[teamId];
-
-          return (
-            <div
-              key={match.fixture.id}
-              style={{
-                background: "white",
-                padding: "15px",
-                borderRadius:
-                  "12px",
-                marginTop: "15px",
-                border:
-                  match.confianza >=
-                  90
-                    ? "3px solid gold"
-                    : "none"
-              }}
-            >
-              {match.confianza >=
-                90 && (
-                <p
-                  style={{
-                    color: "gold",
-                    fontWeight:
-                      "bold"
-                  }}
-                >
-                  🔥 PICK TOP
+                <p>
+                  🏆 {pick.liga}
                 </p>
-              )}
 
-              <h3>
-                🏆{" "}
-                {
-                  match.league.name
-                }
-              </h3>
+                <p>
+                  🎯 {pick.mercado}
+                </p>
 
-              <p>
-                ⚽{" "}
-                {
-                  match.teams.home
-                    .name
-                }{" "}
-                vs{" "}
-                {
-                  match.teams.away
-                    .name
-                }
-              </p>
+                <p>
+                  📊 Promedio:
+                  {" "}
+                  {pick.promedio}
+                </p>
 
-              <p>
-                🎯 Mercado:{" "}
-                {match.mercado}
-              </p>
+                <p>
+                  🚀 Confianza:
+                  {" "}
+                  {pick.confianza}%
+                </p>
 
-              <p>
-                📊 Confianza:{" "}
-                {
-                  match.confianza
-                }
-                %
-              </p>
+              </div>
+            )
+          )
+        }
 
-              {teamStats && (
-                <div
-                  style={{
-                    background:
-                      "#f3f4f6",
-                    padding:
-                      "10px",
-                    borderRadius:
-                      "10px",
-                    marginTop:
-                      "10px"
-                  }}
-                >
-                  <p>
-                    ⚽ Promedio
-                    goles:{" "}
-                    {
-                      teamStats.promedioGoles
-                    }
-                  </p>
+      </section>
 
-                  <p>
-                    🛡️ Goles
-                    encajados:{" "}
-                    {
-                      teamStats.golesEncajados
-                    }
-                  </p>
+      <section
+        style={{
+          marginBottom:
+            "50px"
+        }}
+      >
 
-                  <p>
-                    🔥 Over 2.5:{" "}
-                    {
-                      teamStats.over25
-                    }
-                  </p>
+        <h2
+          style={{
+            color:
+              "#f59e0b"
+          }}
+        >
+          🔴 PICKS LIVE
+        </h2>
 
-                  <p>
-                    🎯 BTTS:{" "}
-                    {
-                      teamStats.btts
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {
+          livePicks.map(
+            (
+              pick,
+              index
+            ) => (
+
+              <div
+                key={index}
+                style={{
+                  background:
+                    "#1e293b",
+                  padding:
+                    "20px",
+                  borderRadius:
+                    "12px",
+                  marginBottom:
+                    "15px",
+                  border:
+                    "1px solid #334155"
+                }}
+              >
+
+                <h3>
+                  ⚽ {pick.partido}
+                </h3>
+
+                <p>
+                  ⏱️ Minuto:
+                  {" "}
+                  {pick.minuto}
+                </p>
+
+                <p>
+                  🎯 {pick.mercado}
+                </p>
+
+                <p>
+                  🚀 Confianza:
+                  {" "}
+                  {pick.confianza}%
+                </p>
+
+              </div>
+            )
+          )
+        }
+
+      </section>
+
+      <section>
+
+        <h2
+          style={{
+            color:
+              "#f43f5e"
+          }}
+        >
+          💰 TRUE SUREBETS
+        </h2>
+
+        {
+          surebets.map(
+            (
+              bet,
+              index
+            ) => (
+
+              <div
+                key={index}
+                style={{
+                  background:
+                    "#1e293b",
+                  padding:
+                    "20px",
+                  borderRadius:
+                    "12px",
+                  marginBottom:
+                    "15px",
+                  border:
+                    "1px solid #334155"
+                }}
+              >
+
+                <h3>
+                  ⚽ {bet.partido}
+                </h3>
+
+                <p>
+                  📈 Beneficio:
+                  {" "}
+                  {bet.beneficio}
+                </p>
+
+                <p>
+                  💵 Ganancia:
+                  {" "}
+                  {bet.ganancia}
+                </p>
+
+              </div>
+            )
+          )
+        }
+
+      </section>
+
     </div>
   );
 }
