@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 export default async function handler(
   req,
   res
@@ -39,10 +42,10 @@ export default async function handler(
 
     for (const partido of partidos.slice(0, 20)) {
 
-      const homeTeam =
+      const home =
         partido.teams.home;
 
-      const awayTeam =
+      const away =
         partido.teams.away;
 
       const leagueId =
@@ -52,7 +55,7 @@ export default async function handler(
 
       const homeStatsResponse =
         await fetch(
-          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${homeTeam.id}`,
+          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${home.id}`,
           {
             headers: {
               "x-apisports-key":
@@ -63,7 +66,7 @@ export default async function handler(
 
       const awayStatsResponse =
         await fetch(
-          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${awayTeam.id}`,
+          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${away.id}`,
           {
             headers: {
               "x-apisports-key":
@@ -78,116 +81,66 @@ export default async function handler(
       const awayData =
         await awayStatsResponse.json();
 
-      const homeStats =
+      const hs =
         homeData.response;
 
-      const awayStats =
+      const as =
         awayData.response;
 
-      if (
-        !homeStats ||
-        !awayStats
-      ) continue;
+      if (!hs || !as)
+        continue;
 
       const homeGoals =
-        parseFloat(
-          homeStats.goals
-            ?.for?.total
-            ?.total || 0
-        );
+        hs.goals?.for
+          ?.total?.total || 0;
 
       const awayGoals =
-        parseFloat(
-          awayStats.goals
-            ?.for?.total
-            ?.total || 0
-        );
-
-      const homeAgainst =
-        parseFloat(
-          homeStats.goals
-            ?.against?.total
-            ?.total || 0
-        );
-
-      const awayAgainst =
-        parseFloat(
-          awayStats.goals
-            ?.against?.total
-            ?.total || 0
-        );
+        as.goals?.for
+          ?.total?.total || 0;
 
       const homeGames =
-        parseFloat(
-          homeStats.fixtures
-            ?.played?.total || 1
-        );
+        hs.fixtures
+          ?.played?.total || 1;
 
       const awayGames =
-        parseFloat(
-          awayStats.fixtures
-            ?.played?.total || 1
-        );
+        as.fixtures
+          ?.played?.total || 1;
 
-      const promedioHome =
+      const avgHome =
         (
           homeGoals /
           homeGames
         ).toFixed(2);
 
-      const promedioAway =
+      const avgAway =
         (
           awayGoals /
           awayGames
         ).toFixed(2);
 
-      const encajadosHome =
+      const promedio =
         (
-          homeAgainst /
-          homeGames
+          parseFloat(avgHome) +
+          parseFloat(avgAway)
         ).toFixed(2);
-
-      const encajadosAway =
-        (
-          awayAgainst /
-          awayGames
-        ).toFixed(2);
-
-      const promedioTotal =
-        (
-          parseFloat(
-            promedioHome
-          ) +
-          parseFloat(
-            promedioAway
-          )
-        ).toFixed(2);
-
-      const formaHome =
-        homeStats.form || "";
-
-      const formaAway =
-        awayStats.form || "";
-
-      let confianza = 50;
 
       let mercado =
-        "Partido equilibrado";
+        "Ambos marcan";
 
-      let calidad = "Media";
+      let confianza = 75;
 
       if (
-        promedioTotal >= 3
+        promedio >= 3
       ) {
 
         mercado =
           "Over 2.5 goles";
 
-        confianza += 20;
+        confianza += 10;
       }
 
       if (
-        promedioTotal >= 4
+        promedio >= 4
       ) {
 
         mercado =
@@ -197,140 +150,105 @@ export default async function handler(
       }
 
       if (
-        parseFloat(
-          promedioHome
-        ) >= 1.5 &&
-        parseFloat(
-          promedioAway
-        ) >= 1.2
-      ) {
-
-        mercado =
-          "Ambos marcan";
-
-        confianza += 15;
-      }
-
-      if (
-        parseFloat(
-          encajadosHome
-        ) >= 1.5 &&
-        parseFloat(
-          encajadosAway
-        ) >= 1.5
+        parseFloat(avgHome)
+          >= 1.5 &&
+        parseFloat(avgAway)
+          >= 1.2
       ) {
 
         confianza += 10;
       }
 
       if (
-        formaHome.includes("W")
-      ) {
+        confianza < 80
+      ) continue;
 
-        confianza += 5;
-      }
+      const pick = {
+
+        fecha,
+
+        liga:
+          partido.league.name,
+
+        partido:
+          `${home.name} vs ${away.name}`,
+
+        mercado,
+
+        confianza,
+
+        promedio
+      };
+
+      picks.push(pick);
+
+      const historialPath =
+        path.join(
+          process.cwd(),
+          "data",
+          "historial.json"
+        );
+
+      let historial = [];
 
       if (
-        formaAway.includes("W")
+        fs.existsSync(
+          historialPath
+        )
       ) {
 
-        confianza += 5;
+        historial =
+          JSON.parse(
+            fs.readFileSync(
+              historialPath,
+              "utf8"
+            )
+          );
       }
 
-      if (
-        formaHome.includes("L") &&
-        formaAway.includes("L")
-      ) {
+      const existe =
+        historial.find(
+          h =>
+            h.partido ===
+              pick.partido &&
+            h.fecha ===
+              pick.fecha
+        );
 
-        confianza -= 10;
+      if (!existe) {
+
+        historial.push({
+          ...pick,
+          resultado:
+            "pendiente"
+        });
+
+        fs.writeFileSync(
+          historialPath,
+          JSON.stringify(
+            historial,
+            null,
+            2
+          )
+        );
       }
 
       if (
         confianza >= 90
       ) {
 
-        calidad = "TOP";
-      }
-
-      else if (
-        confianza >= 80
-      ) {
-
-        calidad = "Alta";
-      }
-
-      else if (
-        confianza >= 70
-      ) {
-
-        calidad = "Buena";
-      }
-
-      else {
-
-        calidad = "Media";
-      }
-
-      if (
-        confianza < 70
-      ) continue;
-
-      const pick = {
-
-        liga:
-          partido.league.name,
-
-        partido:
-          `${homeTeam.name} vs ${awayTeam.name}`,
-
-        mercado,
-
-        confianza,
-
-        calidad,
-
-        promedio:
-          promedioTotal,
-
-        formaHome,
-
-        formaAway,
-
-        golesLocal:
-          promedioHome,
-
-        golesVisitante:
-          promedioAway
-      };
-
-      picks.push(pick);
-
-      if (
-        confianza >= 85
-      ) {
-
         const mensaje =
 `
 🔥 PICK IA PRO
 
-🏆 ${pick.liga}
-
 ⚽ ${pick.partido}
 
-🎯 Mercado:
-${pick.mercado}
+🏆 ${pick.liga}
+
+🎯 ${pick.mercado}
 
 📊 Promedio:
 ${pick.promedio}
-
-📈 Forma local:
-${pick.formaHome}
-
-📈 Forma visitante:
-${pick.formaAway}
-
-⭐ Calidad:
-${pick.calidad}
 
 🚀 Confianza:
 ${pick.confianza}%
@@ -358,20 +276,9 @@ ${pick.confianza}%
       }
     }
 
-    picks.sort(
-      (
-        a,
-        b
-      ) =>
-        b.confianza -
-        a.confianza
-    );
-
     res.status(200).json({
-
       total:
         picks.length,
-
       picks
     });
 
