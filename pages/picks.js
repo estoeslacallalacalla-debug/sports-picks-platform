@@ -39,12 +39,27 @@ export default function Picks() {
 
   }, []);
 
+  const getColor = (
+    confianza
+  ) => {
+
+    if (
+      confianza >= 90
+    ) return "#22c55e";
+
+    if (
+      confianza >= 80
+    ) return "#f59e0b";
+
+    return "#ef4444";
+  };
+
   return (
 
     <div
       style={{
         background:
-          "#0f172a",
+          "#020617",
         minHeight:
           "100vh",
         padding:
@@ -63,23 +78,27 @@ export default function Picks() {
           marginBottom:
             "40px",
           color:
-            "#38bdf8"
+            "#38bdf8",
+          fontSize:
+            "40px"
         }}
       >
-        🔥 SPORTS PICKS IA
+        🔥 SPORTS PICKS IA PRO
       </h1>
 
       <section
         style={{
           marginBottom:
-            "50px"
+            "60px"
         }}
       >
 
         <h2
           style={{
             color:
-              "#22c55e"
+              "#22c55e",
+            marginBottom:
+              "20px"
           }}
         >
           🚀 PICKS IA
@@ -96,15 +115,17 @@ export default function Picks() {
                 key={index}
                 style={{
                   background:
-                    "#1e293b",
+                    "#0f172a",
                   padding:
                     "20px",
                   borderRadius:
-                    "12px",
-                  marginBottom:
                     "15px",
+                  marginBottom:
+                    "20px",
                   border:
-                    "1px solid #334155"
+                    `2px solid ${getColor(
+                      pick.confianza
+                    )}`
                 }}
               >
 
@@ -121,16 +142,82 @@ export default function Picks() {
                 </p>
 
                 <p>
-                  📊 Promedio:
+                  📊 Promedio goles:
                   {" "}
                   {pick.promedio}
                 </p>
 
                 <p>
-                  🚀 Confianza:
+                  ⚔️ Ataque local:
                   {" "}
-                  {pick.confianza}%
+                  {pick.golesLocal}
                 </p>
+
+                <p>
+                  ⚔️ Ataque visitante:
+                  {" "}
+                  {pick.golesVisitante}
+                </p>
+
+                <div
+                  style={{
+                    marginTop:
+                      "15px"
+                  }}
+                >
+
+                  <div
+                    style={{
+                      display:
+                        "flex",
+                      justifyContent:
+                        "space-between"
+                    }}
+                  >
+
+                    <span>
+                      🚀 Confianza
+                    </span>
+
+                    <span>
+                      {pick.confianza}%
+                    </span>
+
+                  </div>
+
+                  <div
+                    style={{
+                      width:
+                        "100%",
+                      height:
+                        "12px",
+                      background:
+                        "#1e293b",
+                      borderRadius:
+                        "20px",
+                      overflow:
+                        "hidden",
+                      marginTop:
+                        "5px"
+                    }}
+                  >
+
+                    <div
+                      style={{
+                        width:
+                          `${pick.confianza}%`,
+                        height:
+                          "100%",
+                        background:
+                          getColor(
+                            pick.confianza
+                          )
+                      }}
+                    />
+
+                  </div>
+
+                </div>
 
               </div>
             )
@@ -142,14 +229,16 @@ export default function Picks() {
       <section
         style={{
           marginBottom:
-            "50px"
+            "60px"
         }}
       >
 
         <h2
           style={{
             color:
-              "#f59e0b"
+              "#f59e0b",
+            marginBottom:
+              "20px"
           }}
         >
           🔴 PICKS LIVE
@@ -166,15 +255,15 @@ export default function Picks() {
                 key={index}
                 style={{
                   background:
-                    "#1e293b",
+                    "#0f172a",
                   padding:
                     "20px",
                   borderRadius:
-                    "12px",
-                  marginBottom:
                     "15px",
+                  marginBottom:
+                    "20px",
                   border:
-                    "1px solid #334155"
+                    "2px solid #f59e0b"
                 }}
               >
 
@@ -210,7 +299,9 @@ export default function Picks() {
         <h2
           style={{
             color:
-              "#f43f5e"
+              "#f43f5e",
+            marginBottom:
+              "20px"
           }}
         >
           💰 TRUE SUREBETS
@@ -227,15 +318,15 @@ export default function Picks() {
                 key={index}
                 style={{
                   background:
-                    "#1e293b",
+                    "#0f172a",
                   padding:
                     "20px",
                   borderRadius:
-                    "12px",
-                  marginBottom:
                     "15px",
+                  marginBottom:
+                    "20px",
                   border:
-                    "1px solid #334155"
+                    "2px solid #f43f5e"
                 }}
               >
 
