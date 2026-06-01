@@ -5,9 +5,6 @@ export default function Picks() {
   const [picks, setPicks] =
     useState([]);
 
-  const [historial, setHistorial] =
-    useState([]);
-
   useEffect(() => {
 
     fetch("/api/analisis-ia")
@@ -18,52 +15,16 @@ export default function Picks() {
         )
       );
 
-    fetch("/api/historial")
-      .then(res => res.json())
-      .then(data =>
-        setHistorial(data)
-      );
+    if (
+      "serviceWorker"
+      in navigator
+    ) {
+
+      navigator.serviceWorker
+        .register("/sw.js");
+    }
 
   }, []);
-
-  const total =
-    historial.length;
-
-  const pendientes =
-    historial.filter(
-      h =>
-        h.resultado ===
-        "pendiente"
-    ).length;
-
-  const acertados =
-    historial.filter(
-      h =>
-        h.resultado ===
-        "acierto"
-    ).length;
-
-  const fallados =
-    historial.filter(
-      h =>
-        h.resultado ===
-        "fallo"
-    ).length;
-
-  const porcentaje =
-    acertados + fallados > 0
-
-      ? (
-          (
-            acertados /
-            (
-              acertados +
-              fallados
-            )
-          ) * 100
-        ).toFixed(1)
-
-      : 0;
 
   return (
 
@@ -88,191 +49,85 @@ export default function Picks() {
             "center",
           color:
             "#38bdf8",
-          fontSize:
-            "42px",
           marginBottom:
             "30px"
         }}
       >
-        🔥 SPORTS PICKS IA PRO
+        🔥 SPORTS PICKS IA PREMIUM
       </h1>
 
-      <div
-        style={{
-          display:
-            "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap:
-            "20px",
-          marginBottom:
-            "40px"
-        }}
-      >
-
-        <div
-          style={{
-            background:
-              "#0f172a",
-            padding:
-              "20px",
-            borderRadius:
-              "20px",
-            border:
-              "2px solid #38bdf8"
-          }}
-        >
-
-          <h3>
-            📊 TOTAL PICKS
-          </h3>
-
-          <h1>
-            {total}
-          </h1>
-
-        </div>
-
-        <div
-          style={{
-            background:
-              "#0f172a",
-            padding:
-              "20px",
-            borderRadius:
-              "20px",
-            border:
-              "2px solid #22c55e"
-          }}
-        >
-
-          <h3>
-            ✅ ACIERTOS
-          </h3>
-
-          <h1>
-            {acertados}
-          </h1>
-
-        </div>
-
-        <div
-          style={{
-            background:
-              "#0f172a",
-            padding:
-              "20px",
-            borderRadius:
-              "20px",
-            border:
-              "2px solid #ef4444"
-          }}
-        >
-
-          <h3>
-            ❌ FALLOS
-          </h3>
-
-          <h1>
-            {fallados}
-          </h1>
-
-        </div>
-
-        <div
-          style={{
-            background:
-              "#0f172a",
-            padding:
-              "20px",
-            borderRadius:
-              "20px",
-            border:
-              "2px solid #f59e0b"
-          }}
-        >
-
-          <h3>
-            🚀 % ACIERTO
-          </h3>
-
-          <h1>
-            {porcentaje}%
-          </h1>
-
-        </div>
-
-      </div>
-
-      <h2
-        style={{
-          marginBottom:
-            "20px"
-        }}
-      >
-        📜 HISTÓRICO PICKS
-      </h2>
-
       {
-        historial
-          .slice()
-          .reverse()
-          .map(
-            (
-              pick,
-              index
-            ) => (
+        picks.map(
+          (
+            pick,
+            index
+          ) => (
 
-              <div
-                key={index}
-                style={{
-                  background:
-                    "#0f172a",
-                  padding:
-                    "20px",
-                  borderRadius:
-                    "20px",
-                  marginBottom:
-                    "20px",
-                  border:
-                    "1px solid #1e293b"
-                }}
-              >
+            <div
+              key={index}
+              style={{
+                background:
+                  "#0f172a",
 
-                <h2>
-                  ⚽ {pick.partido}
-                </h2>
+                padding:
+                  "20px",
 
-                <p>
-                  🏆 {pick.liga}
-                </p>
+                borderRadius:
+                  "20px",
 
-                <p>
-                  🎯 {pick.mercado}
-                </p>
+                marginBottom:
+                  "20px",
 
-                <p>
-                  📅 {pick.fecha}
-                </p>
+                border:
+                  pick.premium
 
-                <p>
-                  🚀 Confianza:
-                  {" "}
-                  {pick.confianza}%
-                </p>
+                    ? "2px solid gold"
 
-                <p>
-                  📌 Estado:
-                  {" "}
+                    : "2px solid #38bdf8"
+              }}
+            >
 
-                  {
-                    pick.resultado
-                  }
-                </p>
+              <h2>
+                ⚽ {pick.partido}
+              </h2>
 
-              </div>
-            )
+              <p>
+                🏆 {pick.liga}
+              </p>
+
+              <p>
+                🎯 {pick.mercado}
+              </p>
+
+              <p>
+                📊 Promedio:
+                {" "}
+                {pick.promedio}
+              </p>
+
+              <p>
+                🚀 Confianza:
+                {" "}
+                {pick.confianza}%
+              </p>
+
+              {
+                pick.premium && (
+
+                  <p
+                    style={{
+                      color:
+                        "gold"
+                    }}
+                  >
+                    💎 PREMIUM PICK
+                  </p>
+                )
+              }
+
+            </div>
           )
+        )
       }
 
     </div>
