@@ -16,7 +16,7 @@ export default async function handler(
 
     const response =
       await fetch(
-        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h&apiKey=${oddsKey}`
+        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h,btts,totals&oddsFormat=decimal&apiKey=${oddsKey}`
       );
 
     const data =
@@ -24,80 +24,181 @@ export default async function handler(
 
     const valueBets = [];
 
+    const casasPermitidas = [
+
+      "Bet365",
+
+      "Betano",
+
+      "Bwin",
+
+      "William Hill",
+
+      "888sport",
+
+      "Sportium"
+    ];
+
     for (
       const match
       of data.slice(0, 20)
     ) {
 
       if (
-        !match.bookmakers ||
-        match.bookmakers.length === 0
+        !match.bookmakers
       ) continue;
 
-      const bookmaker =
-        match.bookmakers[0];
-
-      const market =
-        bookmaker.markets[0];
-
-      const outcomes =
-        market.outcomes;
-
       for (
-        const outcome
-        of outcomes
+        const bookmaker
+        of match.bookmakers
       ) {
 
-        const cuota =
-          outcome.price;
-
-        const probabilidad =
-          (
-            100 / cuota
-          );
-
-        const probabilidadIA =
-          probabilidad +
-          (
-            Math.random() * 15
-          );
-
-        const value =
-          (
-            probabilidadIA -
-            probabilidad
-          ).toFixed(2);
-
         if (
-          value >= 8
+          !casasPermitidas.includes(
+            bookmaker.title
+          )
+        ) continue;
+
+        for (
+          const market
+          of bookmaker.markets
         ) {
 
-          const pick = {
+          for (
+            const outcome
+            of market.outcomes
+          ) {
 
-            partido:
-              `${match.home_team} vs ${match.away_team}`,
+            const cuota =
+              outcome.price;
 
-            apuesta:
-              outcome.name,
+            if (
+              cuota < 1.60 ||
+              cuota > 4.50
+            ) continue;
 
-            cuota,
+            let probabilidadReal =
+              100 / cuota;
 
-            casa:
-              bookmaker.title,
+            let iaBoost = 0;
 
-            value:
-              `${value}%`
-          };
+            if (
+              market.key ===
+              "totals"
+            ) {
 
-          valueBets.push(pick);
+              iaBoost =
+                8 +
+                Math.random() * 8;
+            }
 
-          const mensaje =
+            if (
+              market.key ===
+              "btts"
+            ) {
+
+              iaBoost =
+                6 +
+                Math.random() * 7;
+            }
+
+            if (
+              market.key ===
+              "h2h"
+            ) {
+
+              iaBoost =
+                5 +
+                Math.random() * 6;
+            }
+
+            const value =
+              iaBoost.toFixed(2);
+
+            if (
+              value < 8
+            ) continue;
+
+            let mercado =
+              "Ganador";
+
+            if (
+              market.key ===
+              "totals"
+            ) {
+
+              mercado =
+                outcome.name;
+            }
+
+            if (
+              market.key ===
+              "btts"
+            ) {
+
+              mercado =
+                outcome.name === "Yes"
+
+                  ? "Ambos marcan"
+
+                  : "Ambos NO marcan";
+            }
+
+            const pick = {
+
+              partido:
+                `${match.home_team} vs ${match.away_team}`,
+
+              mercado,
+
+              apuesta:
+                outcome.name,
+
+              cuota,
+
+              casa:
+                bookmaker.title,
+
+              value
+            };
+
+            valueBets.push(
+              pick
+            );
+          }
+        }
+      }
+    }
+
+    valueBets.sort(
+      (a, b) =>
+        parseFloat(
+          b.value
+        ) -
+
+        parseFloat(
+          a.value
+        )
+    );
+
+    const top =
+      valueBets.slice(0, 5);
+
+    for (
+      const pick
+      of top
+    ) {
+
+      const mensaje =
 `
-🔥 VALUE BET IA
+🔥 VALUE BET IA PRO
 
 ⚽ ${pick.partido}
 
-🎯 Apuesta:
+🎯 Mercado:
+${pick.mercado}
+
+📌 Apuesta:
 ${pick.apuesta}
 
 🏦 Casa:
@@ -107,38 +208,38 @@ ${pick.casa}
 ${pick.cuota}
 
 📈 VALUE:
-${pick.value}
+${pick.value}%
 `;
 
-          await fetch(
-            `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-            {
-              method: "POST",
+      await fetch(
+        `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+        {
+          method: "POST",
 
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-              body: JSON.stringify({
-                chat_id:
-                  telegramChat,
+          body: JSON.stringify({
 
-                text:
-                  mensaje
-              })
-            }
-          );
+            chat_id:
+              telegramChat,
+
+            text:
+              mensaje
+          })
         }
-      }
+      );
     }
 
     res.status(200).json({
 
       total:
-        valueBets.length,
+        top.length,
 
-      valueBets
+      valueBets:
+        top
     });
 
   } catch (error) {
