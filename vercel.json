@@ -12,6 +12,11 @@
     },
 
     {
+      "path": "/api/value-bets",
+      "schedule": "0 13 * * *"
+    },
+
+    {
       "path": "/api/actualizar-resultados",
       "schedule": "0 2 * * *"
     }
