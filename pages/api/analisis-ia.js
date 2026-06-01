@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 export default async function handler(
   req,
   res
@@ -39,12 +36,66 @@ export default async function handler(
     const partidos =
       fixturesData.response || [];
 
+    const ligasPermitidas = [
+
+      "Serie A",
+
+      "Serie B",
+
+      "Primera Nacional",
+
+      "MLS",
+
+      "Allsvenskan",
+
+      "Eliteserien",
+
+      "Veikkausliiga",
+
+      "J1 League",
+
+      "K League 1",
+
+      "Primera A",
+
+      "Primera Division",
+
+      "Liga 1",
+
+      "Liga MX",
+
+      "LaLiga2",
+
+      "2. Bundesliga",
+
+      "World Cup",
+
+      "UEFA Champions League",
+
+      "UEFA Europa League",
+
+      "UEFA Europa Conference League",
+
+      "Copa America",
+
+      "Euro Championship"
+    ];
+
     const picks = [];
 
     for (
       const partido
-      of partidos.slice(0, 30)
+      of partidos
     ) {
+
+      const leagueName =
+        partido.league.name;
+
+      if (
+        !ligasPermitidas.includes(
+          leagueName
+        )
+      ) continue;
 
       const home =
         partido.teams.home;
@@ -133,6 +184,159 @@ export default async function handler(
 
       if (
         promedio >= 3
+      ) {
+
+        mercado =
+          "Over 2.5 goles";
+
+        confianza += 10;
+      }
+
+      if (
+        promedio >= 4
+      ) {
+
+        mercado =
+          "Over 3.5 goles";
+
+        confianza += 10;
+      }
+
+      const formaHome =
+        hs.form || "";
+
+      const formaAway =
+        as.form || "";
+
+      if (
+        formaHome.includes("W")
+      ) confianza += 5;
+
+      if (
+        formaAway.includes("W")
+      ) confianza += 5;
+
+      confianza += Math.floor(
+        Math.random() * 10
+      );
+
+      if (
+        confianza < 75
+      ) continue;
+
+      picks.push({
+
+        liga:
+          leagueName,
+
+        partido:
+          `${home.name} vs ${away.name}`,
+
+        mercado,
+
+        confianza,
+
+        promedio
+      });
+    }
+
+    picks.sort(
+      (a, b) =>
+        b.confianza -
+        a.confianza
+    );
+
+    const top3 =
+      picks.slice(0, 3);
+
+    if (
+      top3.length === 0
+    ) {
+
+      await fetch(
+        `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            chat_id:
+              telegramChat,
+
+            text:
+              "📊 Hoy no se detectaron picks fuertes."
+          })
+        }
+      );
+
+    } else {
+
+      for (
+        const pick
+        of top3
+      ) {
+
+        const mensaje =
+`
+🔥 TOP PICK IA
+
+⚽ ${pick.partido}
+
+🏆 ${pick.liga}
+
+🎯 ${pick.mercado}
+
+📊 Promedio:
+${pick.promedio}
+
+🚀 Confianza:
+${pick.confianza}%
+`;
+
+        await fetch(
+          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+
+              chat_id:
+                telegramChat,
+
+              text:
+                mensaje
+            })
+          }
+        );
+      }
+    }
+
+    res.status(200).json({
+
+      total:
+        picks.length,
+
+      picks
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      error:
+        error.message
+    });
+  }
+}        promedio >= 3
       ) {
 
         mercado =
