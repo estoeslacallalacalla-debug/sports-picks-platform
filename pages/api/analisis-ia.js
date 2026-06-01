@@ -43,7 +43,7 @@ export default async function handler(
 
     for (
       const partido
-      of partidos.slice(0, 25)
+      of partidos.slice(0, 30)
     ) {
 
       const home =
@@ -126,7 +126,7 @@ export default async function handler(
           parseFloat(avgAway)
         ).toFixed(2);
 
-      let confianza = 70;
+      let confianza = 65;
 
       let mercado =
         "Ambos marcan";
@@ -165,20 +165,19 @@ export default async function handler(
         formaAway.includes("W")
       ) confianza += 5;
 
-      const machineLearningBoost =
+      const iaBoost =
         Math.floor(
-          Math.random() * 8
+          Math.random() * 10
         );
 
-      confianza +=
-        machineLearningBoost;
+      confianza += iaBoost;
 
       if (
-        confianza < 80
+        confianza < 75
       ) continue;
 
       const premium =
-        confianza >= 92;
+        confianza >= 90;
 
       const pick = {
 
@@ -200,53 +199,52 @@ export default async function handler(
       };
 
       picks.push(pick);
+    }
 
-      const historialPath =
-        path.join(
-          process.cwd(),
-          "data",
-          "historial.json"
-        );
+    picks.sort(
+      (a, b) =>
+        b.confianza -
+        a.confianza
+    );
 
-      let historial = [];
+    const top3 =
+      picks.slice(0, 3);
 
-      if (
-        fs.existsSync(
-          historialPath
-        )
-      ) {
+    if (
+      top3.length === 0
+    ) {
 
-        historial =
-          JSON.parse(
-            fs.readFileSync(
-              historialPath,
-              "utf8"
-            )
-          );
-      }
+      await fetch(
+        `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+        {
+          method: "POST",
 
-      historial.push({
-        ...pick,
-        resultado:
-          "pendiente"
-      });
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-      fs.writeFileSync(
-        historialPath,
-        JSON.stringify(
-          historial,
-          null,
-          2
-        )
+          body: JSON.stringify({
+
+            chat_id:
+              telegramChat,
+
+            text:
+              "📊 Hoy no se detectaron picks fuertes. La IA seguirá analizando partidos."
+          })
+        }
       );
 
-      if (
-        confianza >= 90
+    } else {
+
+      for (
+        const pick
+        of top3
       ) {
 
         const mensaje =
 `
-🔥 PICK IA PRO
+🔥 TOP PICK IA
 
 ⚽ ${pick.partido}
 
@@ -260,7 +258,7 @@ ${pick.promedio}
 🚀 Confianza:
 ${pick.confianza}%
 
-${premium ? "💎 PREMIUM PICK" : ""}
+${pick.premium ? "💎 PREMIUM PICK" : ""}
 `;
 
         await fetch(
@@ -284,6 +282,51 @@ ${premium ? "💎 PREMIUM PICK" : ""}
         );
       }
     }
+
+    const historialPath =
+      path.join(
+        process.cwd(),
+        "data",
+        "historial.json"
+      );
+
+    let historial = [];
+
+    if (
+      fs.existsSync(
+        historialPath
+      )
+    ) {
+
+      historial =
+        JSON.parse(
+          fs.readFileSync(
+            historialPath,
+            "utf8"
+          )
+        );
+    }
+
+    for (
+      const pick
+      of picks
+    ) {
+
+      historial.push({
+        ...pick,
+        resultado:
+          "pendiente"
+      });
+    }
+
+    fs.writeFileSync(
+      historialPath,
+      JSON.stringify(
+        historial,
+        null,
+        2
+      )
+    );
 
     res.status(200).json({
 
