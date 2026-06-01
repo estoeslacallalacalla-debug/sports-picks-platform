@@ -22,7 +22,20 @@ export default async function handler(
     const data =
       await response.json();
 
-    const valueBets = [];
+    if (
+      !Array.isArray(data)
+    ) {
+
+      return res.status(200).json({
+
+        ok: false,
+
+        message:
+          "Límite API alcanzado",
+
+        data
+      });
+    }
 
     const casasPermitidas = [
 
@@ -39,10 +52,37 @@ export default async function handler(
       "Sportium"
     ];
 
+    const ligasPermitidas = [
+
+      "soccer_brazil_campeonato",
+
+      "soccer_brazil_serie_b",
+
+      "soccer_usa_mls",
+
+      "soccer_sweden_allsvenskan",
+
+      "soccer_norway_eliteserien",
+
+      "soccer_finland_veikkausliiga",
+
+      "soccer_japan_j_league",
+
+      "soccer_korea_kleague1"
+    ];
+
+    const valueBets = [];
+
     for (
       const match
-      of data.slice(0, 20)
+      of data.slice(0, 15)
     ) {
+
+      if (
+        !ligasPermitidas.includes(
+          match.sport_key
+        )
+      ) continue;
 
       if (
         !match.bookmakers
@@ -77,47 +117,11 @@ export default async function handler(
               cuota > 4.50
             ) continue;
 
-            let probabilidadReal =
-              100 / cuota;
-
-            let iaBoost = 0;
-
-            if (
-              market.key ===
-              "totals"
-            ) {
-
-              iaBoost =
-                8 +
-                Math.random() * 8;
-            }
-
-            if (
-              market.key ===
-              "btts"
-            ) {
-
-              iaBoost =
-                6 +
-                Math.random() * 7;
-            }
-
-            if (
-              market.key ===
-              "h2h"
-            ) {
-
-              iaBoost =
-                5 +
-                Math.random() * 6;
-            }
-
             const value =
-              iaBoost.toFixed(2);
-
-            if (
-              value < 8
-            ) continue;
+              (
+                8 +
+                Math.random() * 8
+              ).toFixed(2);
 
             let mercado =
               "Ganador";
@@ -144,7 +148,7 @@ export default async function handler(
                   : "Ambos NO marcan";
             }
 
-            const pick = {
+            valueBets.push({
 
               partido:
                 `${match.home_team} vs ${match.away_team}`,
@@ -160,11 +164,7 @@ export default async function handler(
                 bookmaker.title,
 
               value
-            };
-
-            valueBets.push(
-              pick
-            );
+            });
           }
         }
       }
