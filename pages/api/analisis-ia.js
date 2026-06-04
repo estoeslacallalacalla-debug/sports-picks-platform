@@ -1,3 +1,4 @@
+import { supabase } from "../../lib/supabase";
 export default async function handler(
   req,
   res
@@ -226,18 +227,24 @@ export default async function handler(
 
       picks.push({
 
-        liga:
-          leagueName,
+  liga:
+    leagueName,
 
-        partido:
-          `${home.name} vs ${away.name}`,
+  partido:
+    `${home.name} vs ${away.name}`,
 
-        mercado,
+  mercado,
 
-        confianza,
+  confianza,
 
-        promedio
-      });
+  promedio:
+    parseFloat(promedio),
+
+  fecha,
+
+  resultado:
+    "pendiente"
+});
     }
 
     picks.sort(
@@ -248,7 +255,12 @@ export default async function handler(
 
     const top3 =
       picks.slice(0, 3);
+for (const pick of top3) {
 
+  await supabase
+    .from("picks")
+    .insert([pick]);
+}
     if (
       top3.length === 0
     ) {
