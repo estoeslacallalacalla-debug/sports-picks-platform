@@ -32,10 +32,9 @@ export default async function handler(
       );
 
     const fixturesData =
-      await fixturesResponse.json();
+  await fixturesResponse.json();
 
-    const partidos =
-      fixturesData.response || [];
+return res.status(200).json(fixturesData);
 
     return res.status(200).json({
     totalPartidos: partidos.length,
