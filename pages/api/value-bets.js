@@ -17,7 +17,7 @@ export default async function handler(
 
     const response =
       await fetch(
-        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h,btts,totals&oddsFormat=decimal&apiKey=${oddsKey}`
+        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${oddsKey}`
       );
 
     const data =
@@ -134,19 +134,6 @@ export default async function handler(
 
               mercado =
                 outcome.name;
-            }
-
-            if (
-              market.key ===
-              "btts"
-            ) {
-
-              mercado =
-                outcome.name === "Yes"
-
-                  ? "Ambos marcan"
-
-                  : "Ambos NO marcan";
             }
 
             valueBets.push({
