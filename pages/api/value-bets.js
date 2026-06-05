@@ -1,3 +1,4 @@
+import { supabase } from "../../lib/supabase";
 export default async function handler(
   req,
   res
@@ -183,7 +184,43 @@ export default async function handler(
 
     const top =
       valueBets.slice(0, 5);
+for (const pick of top) {
 
+  await supabase
+    .from("picks")
+    .insert([
+      {
+        partido:
+          pick.partido,
+
+        liga:
+          "VALUE BET",
+
+        mercado:
+          `${pick.mercado} - ${pick.apuesta}`,
+
+        confianza:
+          Math.round(
+            parseFloat(
+              pick.value
+            ) * 5
+          ),
+
+        promedio:
+          parseFloat(
+            pick.cuota
+          ),
+
+        fecha:
+          new Date()
+            .toISOString()
+            .split("T")[0],
+
+        resultado:
+          "pendiente"
+      }
+    ]);
+}
     for (
       const pick
       of top
