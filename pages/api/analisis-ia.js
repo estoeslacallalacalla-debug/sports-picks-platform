@@ -39,34 +39,44 @@ export default async function handler(
 
     const ligasPermitidas = [
 
-      const ligasPermitidas = [
-
   "World Cup",
+ 
   "Friendlies",
+ 
   "UEFA Nations League",
 
   "UEFA Champions League",
+  
   "UEFA Europa League",
+
   "UEFA Europa Conference League",
 
   "Serie A",
+  
   "Serie B",
 
   "LaLiga2",
+  
   "2. Bundesliga",
 
   "MLS",
+ 
   "Liga MX",
 
   "Primera Nacional",
+  
   "Primera A",
+  
   "Liga 1",
 
   "Allsvenskan",
+  
   "Eliteserien",
+ 
   "Veikkausliiga",
 
   "J1 League",
+ 
   "J2 League",
 
   "K League 1",
@@ -76,6 +86,7 @@ export default async function handler(
   "Ykkosliiga",
 
   "Copa America",
+  
   "Euro Championship"
 ];
 
