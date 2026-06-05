@@ -39,48 +39,45 @@ export default async function handler(
 
     const ligasPermitidas = [
 
-      "Serie A",
+      const ligasPermitidas = [
 
-      "Serie B",
+  "World Cup",
+  "Friendlies",
+  "UEFA Nations League",
 
-      "Primera Nacional",
+  "UEFA Champions League",
+  "UEFA Europa League",
+  "UEFA Europa Conference League",
 
-      "MLS",
+  "Serie A",
+  "Serie B",
 
-      "Allsvenskan",
+  "LaLiga2",
+  "2. Bundesliga",
 
-      "Eliteserien",
+  "MLS",
+  "Liga MX",
 
-      "Veikkausliiga",
+  "Primera Nacional",
+  "Primera A",
+  "Liga 1",
 
-      "J1 League",
+  "Allsvenskan",
+  "Eliteserien",
+  "Veikkausliiga",
 
-      "K League 1",
+  "J1 League",
+  "J2 League",
 
-      "Primera A",
+  "K League 1",
 
-      "Primera Division",
+  "Superettan",
 
-      "Liga 1",
+  "Ykkosliiga",
 
-      "Liga MX",
-
-      "LaLiga2",
-
-      "2. Bundesliga",
-
-      "World Cup",
-
-      "UEFA Champions League",
-
-      "UEFA Europa League",
-
-      "UEFA Europa Conference League",
-
-      "Copa America",
-
-      "Euro Championship"
-    ];
+  "Copa America",
+  "Euro Championship"
+];
 
     const picks = [];
 
@@ -222,8 +219,9 @@ export default async function handler(
       );
 
       if (
-        confianza < 70
-      ) continue;
+  confianza < 65
+)
+continue;
 
       picks.push({
 
@@ -254,7 +252,7 @@ export default async function handler(
     );
 
     const top3 =
-      picks.slice(0, 3);
+  picks.slice(0, 8);
 for (const pick of top3) {
 
   await supabase
