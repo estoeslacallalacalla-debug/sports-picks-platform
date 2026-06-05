@@ -1,6 +1,4 @@
-import fs from "fs";
-import path from "path";
-
+import { supabase } from "../../lib/supabase";
 export default async function handler(
   req,
   res
@@ -18,26 +16,23 @@ export default async function handler(
         "historial.json"
       );
 
-    if (
-      !fs.existsSync(
-        historialPath
-      )
-    ) {
+    const {
+  data: historial,
+  error
+} = await supabase
+  .from("picks")
+  .select("*")
+  .eq(
+    "resultado",
+    "pendiente"
+  );
 
-      return res
-        .status(200)
-        .json({
-          ok: false
-        });
-    }
+if (error) {
 
-    const historial =
-      JSON.parse(
-        fs.readFileSync(
-          historialPath,
-          "utf8"
-        )
-      );
+  return res.status(500).json({
+    error
+  });
+}
 
     for (
       const pick
@@ -129,16 +124,18 @@ export default async function handler(
           ? "acierto"
 
           : "fallo";
-    }
-
-    fs.writeFileSync(
-      historialPath,
-      JSON.stringify(
-        historial,
-        null,
-        2
-      )
-    );
+    await supabase
+  .from("picks")
+  .update({
+    resultado:
+      acierto
+        ? "acierto"
+        : "fallo"
+  })
+  .eq(
+    "id",
+    pick.id
+  );
 
     res.status(200).json({
 
