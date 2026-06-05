@@ -9,13 +9,6 @@ export default async function handler(
     const apiKey =
       process.env.API_FOOTBALL_KEY;
 
-    const historialPath =
-      path.join(
-        process.cwd(),
-        "data",
-        "historial.json"
-      );
-
     const {
   data: historial,
   error
@@ -136,7 +129,7 @@ if (error) {
     "id",
     pick.id
   );
-
+    }
     res.status(200).json({
 
       ok: true,
