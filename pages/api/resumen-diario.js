@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { supabase } from "../../lib/supabase";
 
 export default async function handler(
   req,
@@ -14,33 +13,19 @@ export default async function handler(
     const telegramChat =
       "@sportspicksia2026";
 
-    const historialPath =
-      path.join(
-        process.cwd(),
-        "data",
-        "historial.json"
-      );
+    const {
+      data: historial,
+      error
+    } = await supabase
+      .from("picks")
+      .select("*");
 
-    if (
-      !fs.existsSync(
-        historialPath
-      )
-    ) {
+    if (error) {
 
-      return res
-        .status(200)
-        .json({
-          ok: false
-        });
+      return res.status(500).json({
+        error
+      });
     }
-
-    const historial =
-      JSON.parse(
-        fs.readFileSync(
-          historialPath,
-          "utf8"
-        )
-      );
 
     const acertados =
       historial.filter(
@@ -54,6 +39,13 @@ export default async function handler(
         h =>
           h.resultado ===
           "fallo"
+      ).length;
+
+    const pendientes =
+      historial.filter(
+        h =>
+          h.resultado ===
+          "pendiente"
       ).length;
 
     const winrate =
@@ -75,14 +67,13 @@ export default async function handler(
 `
 📊 RESUMEN IA DEL DÍA
 
-✅ Aciertos:
-${acertados}
+✅ Aciertos: ${acertados}
 
-❌ Fallos:
-${fallados}
+❌ Fallos: ${fallados}
 
-🚀 Winrate:
-${winrate}%
+⏳ Pendientes: ${pendientes}
+
+🚀 Winrate: ${winrate}%
 
 🔥 Sports Picks IA PRO
 `;
@@ -108,13 +99,17 @@ ${winrate}%
       }
     );
 
-    res.status(200).json({
-      ok: true
+    return res.status(200).json({
+      ok: true,
+      acertados,
+      fallados,
+      pendientes,
+      winrate
     });
 
   } catch (error) {
 
-    res.status(500).json({
+    return res.status(500).json({
       error:
         error.message
     });
