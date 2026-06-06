@@ -152,8 +152,28 @@ const partidos =
       const as =
         awayData.response;
 
-      if (!hs || !as)
-        continue;
+      if (!hs || !as) {
+
+  picks.push({
+
+    liga: leagueName,
+
+    partido:
+      `${home.name} vs ${away.name}`,
+
+    mercado: "Sin estadísticas",
+
+    confianza: 70,
+
+    promedio: 0,
+
+    fecha,
+
+    resultado: "pendiente"
+  });
+
+  continue;
+      }
 
       const avgHome =
         (
