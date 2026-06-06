@@ -48,53 +48,46 @@ const partidos =
     const ligasPermitidas = [
 
   "World Cup",
- 
+  "FIFA Club World Cup",
+
   "Friendlies",
- 
+  "Friendlies Women",
+
+  "World Cup - Qualification Europe",
+  "World Cup - Qualification South America",
+
   "UEFA Nations League",
-
   "UEFA Champions League",
-  
   "UEFA Europa League",
-
   "UEFA Europa Conference League",
 
   "Serie A",
-  
   "Serie B",
 
   "LaLiga2",
-  
+
   "2. Bundesliga",
 
   "MLS",
- 
   "Liga MX",
 
   "Primera Nacional",
-  
   "Primera A",
-  
   "Liga 1",
 
   "Allsvenskan",
-  
   "Eliteserien",
- 
   "Veikkausliiga",
 
   "J1 League",
- 
   "J2 League",
 
   "K League 1",
 
   "Superettan",
-
   "Ykkosliiga",
 
   "Copa America",
-  
   "Euro Championship"
 ];
 
