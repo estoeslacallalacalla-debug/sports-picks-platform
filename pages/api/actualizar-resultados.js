@@ -29,6 +29,18 @@ for (const pick of historial) {
 
   const partidos = data.response || [];
 
+  if (pick.id === 45) {
+
+  return res.status(200).json({
+
+    pick: pick.partido,
+
+    encontrados: partidos.slice(0,20).map(
+      p =>
+        `${p.teams.home.name} vs ${p.teams.away.name}`
+    )
+  });
+}
   const limpiar = (texto) =>
   texto
     .toLowerCase()
