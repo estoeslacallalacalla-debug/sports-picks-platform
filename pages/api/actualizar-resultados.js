@@ -29,10 +29,26 @@ for (const pick of historial) {
 
   const partidos = data.response || [];
 
-  const partido = partidos.find(
-    (p) =>
-      `${p.teams.home.name} vs ${p.teams.away.name}` === pick.partido
-  );
+  const limpiar = (texto) =>
+  texto
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/fc/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const partido = partidos.find((p) => {
+
+  const apiPartido =
+    limpiar(
+      `${p.teams.home.name} vs ${p.teams.away.name}`
+    );
+
+  const bdPartido =
+    limpiar(pick.partido);
+
+  return apiPartido === bdPartido;
+});
 
   if (!partido) continue;
 
