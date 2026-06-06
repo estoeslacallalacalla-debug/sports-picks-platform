@@ -57,7 +57,54 @@ for (const pick of historial) {
       golesLocal > 0 &&
       golesVisitante > 0;
   }
+  
+if (
+  pick.mercado ===
+  `Ganador - ${partido.teams.home.name}`
+) {
 
+  acierto =
+    golesLocal >
+    golesVisitante;
+}
+
+if (
+  pick.mercado ===
+  `Ganador - ${partido.teams.away.name}`
+) {
+
+  acierto =
+    golesVisitante >
+    golesLocal;
+}
+
+if (
+  pick.mercado ===
+  "Ganador - Draw"
+) {
+
+  acierto =
+    golesLocal ===
+    golesVisitante;
+}
+
+if (
+  pick.mercado ===
+  "Over 1.5 goles"
+) {
+
+  acierto =
+    total >= 2;
+}
+
+if (
+  pick.mercado ===
+  "Under 2.5 goles"
+) {
+
+  acierto =
+    total <= 2;
+}
   else if (
     pick.mercado.startsWith("Ganador - ")
   ) {
