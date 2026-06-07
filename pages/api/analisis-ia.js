@@ -146,32 +146,8 @@ const partidos =
 
       if (!hs || !as) {
 
-  console.log(
-  leagueName,
-  mercado,
-  confianza
-);
+  picks.push({
 
-picks.push({
-
-  liga: leagueName,
-
-  partido:
-    `${home.name} vs ${away.name}`,
-
-  mercado,
-
-  confianza,
-
-  promedio:
-    parseFloat(promedio),
-
-  fecha,
-
-  resultado:
-    "pendiente"
-});
-        
     liga: leagueName,
 
     partido:
@@ -189,7 +165,7 @@ picks.push({
   });
 
   continue;
-      }
+}
 
       const avgHome =
         (
