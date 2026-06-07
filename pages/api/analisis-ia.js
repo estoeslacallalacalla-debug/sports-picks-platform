@@ -121,6 +121,17 @@ if (
   mercado = "Ambos marcan";
 }
 
+let confianza = 75;
+
+let mercado = "Over 1.5 goles";
+
+if (
+  leagueName.includes("Friendlies")
+) {
+  confianza = 80;
+  mercado = "Ambos marcan";
+}
+
 picks.push({
 
   liga: leagueName,
@@ -138,131 +149,7 @@ picks.push({
 
   resultado: "pendiente"
 });
-
-continue;
-
-  picks.push({
-
-    liga: leagueName,
-
-    partido:
-      `${home.name} vs ${away.name}`,
-
-    mercado: "Sin estadísticas",
-
-    confianza: 70,
-
-    promedio: 0,
-
-    fecha,
-
-    resultado: "pendiente"
-  });
-
-  continue;
-}
-
-      const avgHome =
-        (
-          (
-            hs.goals?.for
-              ?.total?.total || 0
-          ) /
-
-          (
-            hs.fixtures
-              ?.played?.total || 1
-          )
-        ).toFixed(2);
-
-      const avgAway =
-        (
-          (
-            as.goals?.for
-              ?.total?.total || 0
-          ) /
-
-          (
-            as.fixtures
-              ?.played?.total || 1
-          )
-        ).toFixed(2);
-
-      const promedio =
-        (
-          parseFloat(avgHome) +
-          parseFloat(avgAway)
-        ).toFixed(2);
-
-      let confianza = 60;
-
-      let mercado =
-        "Ambos marcan";
-
-      if (
-        promedio >= 3
-      ) {
-
-        mercado =
-          "Over 2.5 goles";
-
-        confianza += 10;
-      }
-
-      if (
-        promedio >= 4
-      ) {
-
-        mercado =
-          "Over 3.5 goles";
-
-        confianza += 10;
-      }
-
-      const formaHome =
-        hs.form || "";
-
-      const formaAway =
-        as.form || "";
-
-      if (
-        formaHome.includes("W")
-      ) confianza += 5;
-
-      if (
-        formaAway.includes("W")
-      ) confianza += 5;
-
-      confianza += Math.floor(
-        Math.random() * 10
-      );
-
-       if (
-  confianza < 50
-) continue;
-
-      picks.push({
-
-  liga:
-    leagueName,
-
-  partido:
-    `${home.name} vs ${away.name}`,
-
-  mercado,
-
-  confianza,
-
-  promedio:
-    parseFloat(promedio),
-
-  fecha,
-
-  resultado:
-    "pendiente"
-});
     }
-
     picks.sort(
       (a, b) =>
         b.confianza -
