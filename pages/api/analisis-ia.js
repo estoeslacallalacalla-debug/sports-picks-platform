@@ -148,6 +148,11 @@ const partidos =
 
   picks.push({
 
+  console.log(
+  leagueName,
+  mercado,
+  confianza
+);
     liga: leagueName,
 
     partido:
@@ -242,10 +247,9 @@ const partidos =
         Math.random() * 10
       );
 
-      if (
-  confianza < 65
-)
-continue;
+       if (
+  confianza < 50
+) continue;
 
       picks.push({
 
