@@ -146,7 +146,12 @@ picks.push({
 
   resultado: "pendiente"
 });
+      
+  console.log("PICK AÑADIDO:", home.name, away.name);
     }
+    
+  console.log("TOTAL PICKS:", picks.length);
+    
     picks.sort(
       (a, b) =>
         b.confianza -
