@@ -119,11 +119,8 @@ if (
 ) {
   confianza = 80;
   mercado = "Ambos marcan";
+
 }
-
-let confianza = 75;
-
-let mercado = "Over 1.5 goles";
 
 if (
   leagueName.includes("Friendlies")
