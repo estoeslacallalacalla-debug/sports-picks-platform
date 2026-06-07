@@ -37,14 +37,6 @@ export default async function handler(
 const partidos =
   fixturesData.response || [];
 
-    return res.status(200).json({
-    totalPartidos: partidos.length,
-    primeros: partidos.slice(0, 10).map(p => ({
-    liga: p.league.name,
-    local: p.teams.home.name,
-    visitante: p.teams.away.name
-  }))
-});
     const ligasPermitidas = [
 
   "World Cup",
