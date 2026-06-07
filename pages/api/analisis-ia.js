@@ -93,11 +93,11 @@ const partidos =
       const leagueName =
         partido.league.name;
 
-      if (
-        !ligasPermitidas.includes(
-          leagueName
-        )
-      ) continue;
+      // if (
+//   !ligasPermitidas.includes(
+//     leagueName
+//   )
+// ) continue;
 
       const home =
         partido.teams.home;
