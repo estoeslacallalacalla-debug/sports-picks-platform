@@ -146,13 +146,32 @@ const partidos =
 
       if (!hs || !as) {
 
-  picks.push({
-
   console.log(
   leagueName,
   mercado,
   confianza
 );
+
+picks.push({
+
+  liga: leagueName,
+
+  partido:
+    `${home.name} vs ${away.name}`,
+
+  mercado,
+
+  confianza,
+
+  promedio:
+    parseFloat(promedio),
+
+  fecha,
+
+  resultado:
+    "pendiente"
+});
+        
     liga: leagueName,
 
     partido:
