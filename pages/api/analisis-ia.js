@@ -110,41 +110,36 @@ const partidos =
 
       const season = 2025;
 
-      const homeStatsResponse =
-        await fetch(
-          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${home.id}`,
-          {
-            headers: {
-              "x-apisports-key":
-                apiKey
-            }
-          }
-        );
+      let confianza = 75;
 
-      const awayStatsResponse =
-        await fetch(
-          `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${away.id}`,
-          {
-            headers: {
-              "x-apisports-key":
-                apiKey
-            }
-          }
-        );
+let mercado = "Over 1.5 goles";
 
-      const homeData =
-        await homeStatsResponse.json();
+if (
+  leagueName.includes("Friendlies")
+) {
+  confianza = 80;
+  mercado = "Ambos marcan";
+}
 
-      const awayData =
-        await awayStatsResponse.json();
+picks.push({
 
-      const hs =
-        homeData.response;
+  liga: leagueName,
 
-      const as =
-        awayData.response;
+  partido:
+    `${home.name} vs ${away.name}`,
 
-      if (!hs || !as) {
+  mercado,
+
+  confianza,
+
+  promedio: 2.5,
+
+  fecha,
+
+  resultado: "pendiente"
+});
+
+continue;
 
   picks.push({
 
