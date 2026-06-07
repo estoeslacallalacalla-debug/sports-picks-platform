@@ -108,7 +108,7 @@ const partidos =
       const leagueId =
         partido.league.id;
 
-      const season = 2026;
+      const season = 2025;
 
       const homeStatsResponse =
         await fetch(
