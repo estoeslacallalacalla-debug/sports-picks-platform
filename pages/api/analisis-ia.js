@@ -239,7 +239,9 @@ ${pick.confianza}%
     }
 
     res.status(200).json({
-  prueba: "FUNCIONA"
+  totalPartidos: partidos.length,
+  totalPicks: picks.length,
+  primerPartido: partidos[0] || null
 });
 
   } catch (error) {
