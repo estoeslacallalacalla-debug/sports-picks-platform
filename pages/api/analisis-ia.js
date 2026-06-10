@@ -23,8 +23,6 @@ const response =
 const fixturesData =
   await response.json();
 
-return res.status(200).json(fixturesData);
-
     const ligasPermitidas = [
 
   "World Cup",
