@@ -72,24 +72,22 @@ const fixturesData =
     const picks = [];
 
     for (
-      const partido
-      of partidos
-    ) {
+  const partido
+  of fixturesData.matches || []
+)
 
       const leagueName =
-        partido.league.name;
+  partido.competition?.name || "Liga";
 
-      // if (
-//   !ligasPermitidas.includes(
-//     leagueName
-//   )
-// ) continue;
+const home = {
+  name:
+    partido.homeTeam?.name || "Local"
+};
 
-      const home =
-        partido.teams.home;
-
-      const away =
-        partido.teams.away;
+const away = {
+  name:
+    partido.awayTeam?.name || "Visitante"
+};
 
       const leagueId =
         partido.league.id;
