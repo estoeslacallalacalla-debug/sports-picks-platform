@@ -6,38 +6,24 @@ export default async function handler(
 
   try {
 
-    const apiKey =
-      process.env.API_FOOTBALL_KEY;
+    const footballDataKey =
+  process.env.FOOTBALL_DATA_KEY;
 
-    const telegramToken =
-      process.env.TELEGRAM_BOT_TOKEN;
+const response =
+  await fetch(
+    "https://api.football-data.org/v4/matches",
+    {
+      headers: {
+        "X-Auth-Token":
+          footballDataKey
+      }
+    }
+  );
 
-    const telegramChat =
-      "@sportspicksia2026";
+const fixturesData =
+  await response.json();
 
-    const fecha =
-      new Date()
-        .toISOString()
-        .split("T")[0];
-
-    const fixturesResponse =
-      await fetch(
-        `https://v3.football.api-sports.io/fixtures?date=${fecha}`,
-        {
-          headers: {
-            "x-apisports-key":
-              apiKey
-          }
-        }
-      );
-
-    const fixturesData =
-  await fixturesResponse.json();
-    
 return res.status(200).json(fixturesData);
-    
-const partidos =
-  fixturesData.response || [];
 
     const ligasPermitidas = [
 
