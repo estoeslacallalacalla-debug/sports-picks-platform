@@ -1,225 +1,92 @@
 import { supabase } from "../../lib/supabase";
-export default async function handler(
-  req,
-  res
-) {
 
+export default async function handler(req, res) {
   try {
-
     const footballDataKey =
-  process.env.FOOTBALL_DATA_KEY;
+      process.env.FOOTBALL_DATA_KEY ||
+      process.env["CLAVE_DE_DATOS_DE_FÚTBOL"];
 
-const response =
-  await fetch(
-    "https://api.football-data.org/v4/matches",
-    {
-      headers: {
-        "X-Auth-Token":
-          footballDataKey
-      }
+    if (!footballDataKey) {
+      return res.status(500).json({
+        error: "FOOTBALL_DATA_KEY no configurada"
+      });
     }
-  );
 
-const fixturesData =
-  await response.json();
+    const fecha = new Date()
+      .toISOString()
+      .split("T")[0];
 
-    const ligasPermitidas = [
+    const response = await fetch(
+      "https://api.football-data.org/v4/matches",
+      {
+        headers: {
+          "X-Auth-Token": footballDataKey
+        }
+      }
+    );
 
-  "World Cup",
-  "FIFA Club World Cup",
+    const fixturesData = await response.json();
 
-  "Friendlies",
-  "Friendlies Women",
-
-  "World Cup - Qualification Europe",
-  "World Cup - Qualification South America",
-
-  "UEFA Nations League",
-  "UEFA Champions League",
-  "UEFA Europa League",
-  "UEFA Europa Conference League",
-
-  "Serie A",
-  "Serie B",
-
-  "LaLiga2",
-
-  "2. Bundesliga",
-
-  "MLS",
-  "Liga MX",
-
-  "Primera Nacional",
-  "Primera A",
-  "Liga 1",
-
-  "Allsvenskan",
-  "Eliteserien",
-  "Veikkausliiga",
-
-  "J1 League",
-  "J2 League",
-
-  "K League 1",
-
-  "Superettan",
-  "Ykkosliiga",
-
-  "Copa America",
-  "Euro Championship"
-];
+    const partidos =
+      fixturesData.matches || [];
 
     const picks = [];
 
-    for (
-  const partido
-  of fixturesData.matches || []
-) {
+    for (const partido of partidos) {
+      const leagueName =
+        partido.competition?.name || "Liga";
 
-  const leagueName =
-    partido.competition?.name || "Liga";
+      const homeName =
+        partido.homeTeam?.name || "Local";
 
-  const home = {
-    name:
-      partido.homeTeam?.name || "Local"
-  };
+      const awayName =
+        partido.awayTeam?.name || "Visitante";
 
-  const away = {
-    name:
-      partido.awayTeam?.name || "Visitante"
-  };
+      let confianza = 75;
+      let mercado = "Over 1.5 goles";
 
-  let confianza = 75;
+      if (
+        leagueName.includes("Friendly") ||
+        leagueName.includes("Friendlies")
+      ) {
+        confianza = 80;
+        mercado = "Ambos marcan";
+      }
 
-  let mercado = "Over 1.5 goles";
-
-  if (
-    leagueName.includes("Friendlies")
-  ) {
-    confianza = 80;
-    mercado = "Ambos marcan";
-  }
-
-  picks.push({
-    liga: leagueName,
-    partido:
-      `${home.name} vs ${away.name}`,
-    mercado,
-    confianza,
-    promedio: 2.5,
-    fecha,
-    resultado: "pendiente"
-  });
-
-}
-    
-  console.log("PICK AÑADIDO:", home.name, away.name);
+      picks.push({
+        liga: leagueName,
+        partido: `${homeName} vs ${awayName}`,
+        mercado,
+        confianza,
+        promedio: 2.5,
+        fecha,
+        resultado: "pendiente"
+      });
     }
-    
-  console.log("TOTAL PICKS:", picks.length);
-    
+
     picks.sort(
       (a, b) =>
-        b.confianza -
-        a.confianza
+        b.confianza - a.confianza
     );
 
-    const top3 =
-  picks.slice(0, 8);
-for (const pick of top3) {
+    const topPicks =
+      picks.slice(0, 8);
 
-  await supabase
-    .from("picks")
-    .insert([pick]);
-}
-    if (
-      top3.length === 0
-    ) {
-
-      await fetch(
-        `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-
-            chat_id:
-              telegramChat,
-
-            text:
-              "📊 Hoy no se detectaron picks fuertes."
-          })
-        }
-      );
-
-    } else {
-
-      for (
-        const pick
-        of top3
-      ) {
-
-        const mensaje =
-`
-🔥 TOP PICK IA
-
-⚽ ${pick.partido}
-
-🏆 ${pick.liga}
-
-🎯 ${pick.mercado}
-
-📊 Promedio:
-${pick.promedio}
-
-🚀 Confianza:
-${pick.confianza}%
-`;
-
-        await fetch(
-          `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-
-              chat_id:
-                telegramChat,
-
-              text:
-                mensaje
-            })
-          }
-        );
-      }
+    if (topPicks.length > 0) {
+      await supabase
+        .from("picks")
+        .insert(topPicks);
     }
 
-    res.status(200).json({
-  totalPartidos:
-    fixturesData.matches?.length || 0,
-
-  totalPicks:
-    picks.length,
-
-  primerPartido:
-    fixturesData.matches?.[0] || null
-});
+    return res.status(200).json({
+      totalPartidos: partidos.length,
+      totalPicks: picks.length,
+      picks: topPicks
+    });
 
   } catch (error) {
-
-    res.status(500).json({
-      error:
-        error.message
+    return res.status(500).json({
+      error: error.message
     });
   }
 }
