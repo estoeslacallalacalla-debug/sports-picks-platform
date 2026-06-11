@@ -74,63 +74,45 @@ const fixturesData =
     for (
   const partido
   of fixturesData.matches || []
-)
-
-      const leagueName =
-  partido.competition?.name || "Liga";
-
-const home = {
-  name:
-    partido.homeTeam?.name || "Local"
-};
-
-const away = {
-  name:
-    partido.awayTeam?.name || "Visitante"
-};
-
-      const leagueId =
-        partido.league.id;
-
-      const season = 2025;
-
-      let confianza = 75;
-
-let mercado = "Over 1.5 goles";
-
-if (
-  leagueName.includes("Friendlies")
 ) {
-  confianza = 80;
-  mercado = "Ambos marcan";
+
+  const leagueName =
+    partido.competition?.name || "Liga";
+
+  const home = {
+    name:
+      partido.homeTeam?.name || "Local"
+  };
+
+  const away = {
+    name:
+      partido.awayTeam?.name || "Visitante"
+  };
+
+  let confianza = 75;
+
+  let mercado = "Over 1.5 goles";
+
+  if (
+    leagueName.includes("Friendlies")
+  ) {
+    confianza = 80;
+    mercado = "Ambos marcan";
+  }
+
+  picks.push({
+    liga: leagueName,
+    partido:
+      `${home.name} vs ${away.name}`,
+    mercado,
+    confianza,
+    promedio: 2.5,
+    fecha,
+    resultado: "pendiente"
+  });
 
 }
-
-if (
-  leagueName.includes("Friendlies")
-) {
-  confianza = 80;
-  mercado = "Ambos marcan";
-}
-
-picks.push({
-
-  liga: leagueName,
-
-  partido:
-    `${home.name} vs ${away.name}`,
-
-  mercado,
-
-  confianza,
-
-  promedio: 2.5,
-
-  fecha,
-
-  resultado: "pendiente"
-});
-      
+    
   console.log("PICK AÑADIDO:", home.name, away.name);
     }
     
@@ -223,9 +205,14 @@ ${pick.confianza}%
     }
 
     res.status(200).json({
-  totalPartidos: partidos.length,
-  totalPicks: picks.length,
-  primerPartido: partidos[0] || null
+  totalPartidos:
+    fixturesData.matches?.length || 0,
+
+  totalPicks:
+    picks.length,
+
+  primerPartido:
+    fixturesData.matches?.[0] || null
 });
 
   } catch (error) {
