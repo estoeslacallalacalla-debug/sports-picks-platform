@@ -168,7 +168,7 @@ console.log(
           );
 
          if (
-            total < 2
+            total < 1
            )
            
           const beneficio =
