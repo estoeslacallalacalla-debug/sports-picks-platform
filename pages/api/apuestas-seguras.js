@@ -26,22 +26,34 @@ export default async function handler(
 
     const surebets = [];
 
-    await supabase
-.from("apuestas_seguras")
-.insert([
-{
-partido: "PRUEBA",
-beneficio: "1%",
-ganancia: "1€",
-fecha: new Date()
-.toISOString()
-.split("T")[0],
-estado: "test",
-casa_local: "test",
-casa_empate: "test",
-casa_visitante: "test"
-}
-]);
+    const { data: pruebaData, error: pruebaError } =
+  await supabase
+    .from("apuestas_seguras")
+    .insert([
+      {
+        partido: "PRUEBA",
+        beneficio: "1%",
+        ganancia: "1€",
+        fecha: new Date()
+          .toISOString()
+          .split("T")[0],
+        estado: "test",
+        casa_local: "test",
+        casa_empate: "test",
+        casa_visitante: "test"
+      }
+    ])
+    .select();
+
+console.log(
+  "SUPABASE DATA:",
+  pruebaData
+);
+
+console.log(
+  "SUPABASE ERROR:",
+  pruebaError
+);
     
     for (const match of data) {
 
