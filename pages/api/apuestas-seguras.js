@@ -5,6 +5,9 @@ export default async function handler(
 ) {
   try {
 
+    console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_KEY:", !!process.env.SUPABASE_ANON_KEY);
+
     const apiKey =
       process.env.ODDS_API_KEY;
 
