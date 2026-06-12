@@ -222,22 +222,29 @@ console.log(
             surebet
           );
 
-        await supabase
-  .from("apuestas_seguras")
-  .insert([
-    {
-      partido: surebet.partido,
-      beneficio: surebet.beneficio,
-      ganancia: surebet.ganancia,
-      fecha: new Date()
-        .toISOString()
-        .split("T")[0],
-      estado: "activa",
-      casa_local: bestHome.bookie,
-      casa_empate: bestDraw.bookie,
-      casa_visitante: bestAway.bookie
-    }
-  ]);
+        const { data: insertData, error: insertError } =
+  await supabase
+    .from("apuestas_seguras")
+    .insert([
+      {
+        partido: surebet.partido,
+        beneficio: surebet.beneficio,
+        ganancia: surebet.ganancia,
+        fecha: new Date()
+          .toISOString()
+          .split("T")[0],
+        estado: "activa",
+        casa_local: bestHome.bookie,
+        casa_empate: bestDraw.bookie,
+        casa_visitante: bestAway.bookie
+      }
+    ]);
+
+console.log(
+  "SUPABASE INSERT:",
+  insertData,
+  insertError
+);
         
           if (
             parseFloat(
