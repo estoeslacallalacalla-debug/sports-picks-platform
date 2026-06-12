@@ -1,3 +1,4 @@
+import { supabase } from "../../lib/supabase";
 export default async function handler(
   req,
   res
@@ -192,6 +193,20 @@ export default async function handler(
             surebet
           );
 
+        await supabase
+  .from("apuestas_seguras")
+  .insert([
+    {
+      partido: surebet.partido,
+      beneficio: surebet.beneficio,
+      ganancia: surebet.ganancia,
+      fecha: new Date()
+        .toISOString()
+        .split("T")[0],
+      estado: "activa"
+    }
+  ]);
+        
           if (
             parseFloat(
               beneficio
