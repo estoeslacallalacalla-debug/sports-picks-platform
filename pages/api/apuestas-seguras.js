@@ -193,6 +193,21 @@ export default async function handler(
             surebet
           );
 
+          await supabase
+  .from("apuestas_seguras")
+  .insert([
+    {
+      partido: surebet.partido,
+      beneficio: surebet.beneficio,
+      ganancia: surebet.ganancia,
+      fecha: new Date(),
+      estado: "activa",
+      casa_local: bestHome.bookie,
+      casa_empate: bestDraw.bookie,
+      casa_visitante: bestAway.bookie
+    }
+  ]);
+          
         await supabase
   .from("apuestas_seguras")
   .insert([
