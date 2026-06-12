@@ -167,9 +167,9 @@ console.log(
             1 / bestAway.price
           );
 
-         if (
-            total < 1
-           )
+          if (
+            total < 2
+            ) {
            
           const beneficio =
             (
