@@ -26,7 +26,7 @@ export default async function handler(
 
     const surebets = [];
 
-    const { data: pruebaData, error: pruebaError } =
+    const { data, error } =
   await supabase
     .from("apuestas_seguras")
     .insert([
@@ -46,8 +46,9 @@ export default async function handler(
     .select();
 
 console.log(
-  "SUPABASE DATA:",
-  pruebaData
+  "SUPABASE TEST",
+  data,
+  error
 );
 
 console.log(
