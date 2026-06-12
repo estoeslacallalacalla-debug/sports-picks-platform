@@ -22,11 +22,11 @@ export default async function handler(
       );
 
     const data =
-      await response.json();
+  await response.json();
 
-    const surebets = [];
+const surebets = [];
 
-    const { data, error } =
+const { data: supabaseData, error: supabaseError } =
   await supabase
     .from("apuestas_seguras")
     .insert([
@@ -47,13 +47,8 @@ export default async function handler(
 
 console.log(
   "SUPABASE TEST",
-  data,
-  error
-);
-
-console.log(
-  "SUPABASE ERROR:",
-  pruebaError
+  supabaseData,
+  supabaseError
 );
     
     for (const match of data) {
