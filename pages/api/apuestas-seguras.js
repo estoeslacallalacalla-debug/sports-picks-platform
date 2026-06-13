@@ -231,7 +231,6 @@ console.log(
             surebet
           );
 
-        const { data: insertData, error: insertError } =
   const hashPartido =
 `${match.home_team}-${match.away_team}`;
 
