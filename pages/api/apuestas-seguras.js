@@ -4,6 +4,16 @@ export default async function handler(
   res
 ) {
   try {
+    await supabase
+  .from("apuestas_seguras")
+  .delete()
+  .lt(
+    "fecha",
+    new Date(
+      Date.now()
+      - 24 * 60 * 60 * 1000
+    ).toISOString()
+  );
 
     console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
 console.log("SUPABASE_KEY:", !!process.env.SUPABASE_ANON_KEY);
@@ -222,28 +232,95 @@ console.log(
           );
 
         const { data: insertData, error: insertError } =
+  const hashPartido =
+`${match.home_team}-${match.away_team}`;
+
+const { data: existente } =
+await supabase
+  .from("apuestas_seguras")
+  .select("id, beneficio")
+  .eq("hash_partido", hashPartido)
+  .limit(1);
+
+if (
+  existente &&
+  existente.length > 0
+) {
+
+  await supabase
+    .from("apuestas_seguras")
+    .update({
+      beneficio:
+        surebet.beneficio,
+
+      ganancia:
+        surebet.ganancia,
+
+      fecha:
+        new Date()
+          .toISOString(),
+
+      ultima_actualizacion:
+        new Date()
+          .toISOString(),
+
+      estado:
+        "activa",
+
+      casa_local:
+        bestHome.bookie,
+
+      casa_empate:
+        bestDraw.bookie,
+
+      casa_visitante:
+        bestAway.bookie
+    })
+    .eq(
+      "hash_partido",
+      hashPartido
+    );
+
+} else {
+
   await supabase
     .from("apuestas_seguras")
     .insert([
       {
-        partido: surebet.partido,
-        beneficio: surebet.beneficio,
-        ganancia: surebet.ganancia,
-        fecha: new Date()
-          .toISOString()
-          .split("T")[0],
-        estado: "activa",
-        casa_local: bestHome.bookie,
-        casa_empate: bestDraw.bookie,
-        casa_visitante: bestAway.bookie
+        partido:
+          surebet.partido,
+
+        hash_partido:
+          hashPartido,
+
+        beneficio:
+          surebet.beneficio,
+
+        ganancia:
+          surebet.ganancia,
+
+        fecha:
+          new Date()
+            .toISOString(),
+
+        ultima_actualizacion:
+          new Date()
+            .toISOString(),
+
+        estado:
+          "activa",
+
+        casa_local:
+          bestHome.bookie,
+
+        casa_empate:
+          bestDraw.bookie,
+
+        casa_visitante:
+          bestAway.bookie
       }
     ]);
-
-console.log(
-  "SUPABASE INSERT:",
-  insertData,
-  insertError
-);
+}
         
           if (
             parseFloat(
