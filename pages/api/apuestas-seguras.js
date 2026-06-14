@@ -1,420 +1,187 @@
 import { supabase } from "../../lib/supabase";
-export default async function handler(
-  req,
-  res
-) {
+
+export default async function handler(req, res) {
   try {
+    // Limpiar surebets de más de 24h
     await supabase
-  .from("apuestas_seguras")
-  .delete()
-  .lt(
-    "fecha",
-    new Date(
-      Date.now()
-      - 24 * 60 * 60 * 1000
-    ).toISOString()
-  );
+      .from("apuestas_seguras")
+      .delete()
+      .lt("fecha", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
-    console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
-console.log("SUPABASE_KEY:", !!process.env.SUPABASE_ANON_KEY);
+    const oddsApiKey     = process.env.ODDS_API_KEY;
+    const telegramToken  = process.env.TELEGRAM_BOT_TOKEN; // ← unificado
+    const telegramChat   = process.env.TELEGRAM_CHAT_ID || "@sportspicksia2026";
+    const bankroll       = 100;
 
-    const apiKey =
-      process.env.ODDS_API_KEY;
+    // Deportes a monitorizar (fútbol masculino y femenino)
+    const deportes = [
+      "soccer",
+    ];
 
-    const telegramToken =
-      process.env.TELEGRAM_BOT_TOKEN;
+    const surebets = [];
 
-    const telegramChat =
-      "@sportspicksia2026";
-
-    const bankroll = 100;
-
-    const response =
-      await fetch(
-        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h&oddsFormat=decimal&apiKey=${apiKey}`
+    for (const deporte of deportes) {
+      const response = await fetch(
+        `https://api.the-odds-api.com/v4/sports/${deporte}/odds/?regions=eu&markets=h2h&oddsFormat=decimal&apiKey=${oddsApiKey}`
       );
 
-    const data =
-  await response.json();
-
-const surebets = [];
-
-const { data: supabaseData, error: supabaseError } =
-  await supabase
-    .from("apuestas_seguras")
-    .insert([
-      {
-        partido: "PRUEBA",
-        beneficio: "1%",
-        ganancia: "1€",
-        fecha: new Date()
-          .toISOString()
-          .split("T")[0],
-        estado: "test",
-        casa_local: "test",
-        casa_empate: "test",
-        casa_visitante: "test"
+      if (!response.ok) {
+        console.error(`Error Odds API: ${response.status}`);
+        continue;
       }
-    ])
-    .select();
 
-console.log(
-  "SUPABASE TEST",
-  supabaseData,
-  supabaseError
-);
-    
-    for (const match of data) {
+      const partidos = await response.json();
+      if (!Array.isArray(partidos)) continue;
 
-      if (
-        !match.bookmakers ||
-        match.bookmakers.length < 2
-      ) continue;
+      for (const match of partidos) {
+        if (!match.bookmakers || match.bookmakers.length < 2) continue;
 
-      let bestHome = {
-        price: 0,
-        bookie: ""
-      };
+        // Solo casas conocidas
+        const casasPermitidas = [
+          "bet365", "betfair", "william hill", "bwin",
+          "unibet", "1xbet", "pinnacle", "betway", "marathonbet"
+        ];
 
-      let bestDraw = {
-        price: 0,
-        bookie: ""
-      };
+        const bookmakersFiltrados = match.bookmakers.filter(b =>
+          casasPermitidas.some(c => b.title.toLowerCase().includes(c))
+        );
 
-      let bestAway = {
-        price: 0,
-        bookie: ""
-      };
+        if (bookmakersFiltrados.length < 2) continue;
 
-      for (const bookmaker of match.bookmakers) {
+        let bestHome = { price: 0, bookie: "" };
+        let bestDraw = { price: 0, bookie: "" };
+        let bestAway = { price: 0, bookie: "" };
 
-        const market =
-          bookmaker.markets?.find(
-            (m) =>
-              m.key === "h2h"
-          );
+        for (const bookmaker of bookmakersFiltrados) {
+          const market = bookmaker.markets?.find(m => m.key === "h2h");
+          if (!market) continue;
 
-        if (!market) continue;
-
-        for (const outcome of market.outcomes) {
-
-          if (
-            outcome.name ===
-            match.home_team
-          ) {
-
-            if (
-              outcome.price >
-              bestHome.price
-            ) {
-
-              bestHome = {
-                price:
-                  outcome.price,
-
-                bookie:
-                  bookmaker.title
-              };
-            }
-          }
-
-          else if (
-            outcome.name === "Draw"
-          ) {
-
-            if (
-              outcome.price >
-              bestDraw.price
-            ) {
-
-              bestDraw = {
-                price:
-                  outcome.price,
-
-                bookie:
-                  bookmaker.title
-              };
-            }
-          }
-
-          else if (
-            outcome.name ===
-            match.away_team
-          ) {
-
-            if (
-              outcome.price >
-              bestAway.price
-            ) {
-
-              bestAway = {
-                price:
-                  outcome.price,
-
-                bookie:
-                  bookmaker.title
-              };
+          for (const outcome of market.outcomes) {
+            if (outcome.name === match.home_team && outcome.price > bestHome.price) {
+              bestHome = { price: outcome.price, bookie: bookmaker.title };
+            } else if (outcome.name === "Draw" && outcome.price > bestDraw.price) {
+              bestDraw = { price: outcome.price, bookie: bookmaker.title };
+            } else if (outcome.name === match.away_team && outcome.price > bestAway.price) {
+              bestAway = { price: outcome.price, bookie: bookmaker.title };
             }
           }
         }
-      }
 
-      if (
-        bestHome.price > 0 &&
-        bestDraw.price > 0 &&
-        bestAway.price > 0
-      ) {
+        // Necesitamos las 3 cuotas
+        if (bestHome.price <= 1 || bestDraw.price <= 1 || bestAway.price <= 1) continue;
 
+        // CORRECCIÓN CLAVE: total < 1 para que sea surebet real
         const total =
-          (
-            1 / bestHome.price
-          ) +
-          (
-            1 / bestDraw.price
-          ) +
-          (
-            1 / bestAway.price
+          (1 / bestHome.price) +
+          (1 / bestDraw.price) +
+          (1 / bestAway.price);
+
+        if (total >= 1) continue; // ← corregido de < 2 a >= 1
+
+        // Calcular distribución óptima
+        const beneficioPct = ((1 - total) * 100).toFixed(2);
+        const retorno      = (bankroll / total).toFixed(2);
+        const ganancia     = (bankroll / total - bankroll).toFixed(2);
+
+        // Apuesta óptima para cada resultado
+        const apuestaHome = ((bankroll / total) / bestHome.price).toFixed(2);
+        const apuestaDraw = ((bankroll / total) / bestDraw.price).toFixed(2);
+        const apuestaAway = ((bankroll / total) / bestAway.price).toFixed(2);
+
+        const nombrePartido = `${match.home_team} vs ${match.away_team}`;
+        const hashPartido   = `${match.home_team}-${match.away_team}`.toLowerCase().replace(/\s/g, "");
+        const fechaISO      = new Date().toISOString();
+
+        // Guardar o actualizar en Supabase
+        const { data: existente } = await supabase
+          .from("apuestas_seguras")
+          .select("id")
+          .eq("hash_partido", hashPartido)
+          .limit(1);
+
+        const registro = {
+          partido:              nombrePartido,
+          hash_partido:         hashPartido,
+          beneficio:            `${beneficioPct}%`,
+          ganancia:             `${ganancia}€`,
+          retorno:              `${retorno}€`,
+          fecha:                fechaISO,
+          ultima_actualizacion: fechaISO,
+          estado:               "activa",
+          casa_local:           bestHome.bookie,
+          cuota_local:          bestHome.price,
+          apuesta_local:        `${apuestaHome}€`,
+          casa_empate:          bestDraw.bookie,
+          cuota_empate:         bestDraw.price,
+          apuesta_empate:       `${apuestaDraw}€`,
+          casa_visitante:       bestAway.bookie,
+          cuota_visitante:      bestAway.price,
+          apuesta_visitante:    `${apuestaAway}€`,
+        };
+
+        if (existente && existente.length > 0) {
+          await supabase
+            .from("apuestas_seguras")
+            .update(registro)
+            .eq("hash_partido", hashPartido);
+        } else {
+          await supabase
+            .from("apuestas_seguras")
+            .insert([registro]);
+        }
+
+        surebets.push({ nombrePartido, beneficioPct, ganancia });
+
+        // Enviar a Telegram si el beneficio es >= 0.5% (real, no 1.5%)
+        if (parseFloat(beneficioPct) >= 0.5) {
+          const mensaje =
+`🔥 *SUREBET DETECTADA* ⚡
+
+⚽ *${nombrePartido}*
+
+━━━━━━━━━━━━━━━━
+🏠 *LOCAL*
+Casa: ${bestHome.bookie}
+Cuota: ${bestHome.price}
+💰 Apostar: *${apuestaHome}€*
+
+🤝 *EMPATE*
+Casa: ${bestDraw.bookie}
+Cuota: ${bestDraw.price}
+💰 Apostar: *${apuestaDraw}€*
+
+✈️ *VISITANTE*
+Casa: ${bestAway.bookie}
+Cuota: ${bestAway.price}
+💰 Apostar: *${apuestaAway}€*
+
+━━━━━━━━━━━━━━━━
+📈 Beneficio: *${beneficioPct}%*
+💵 Ganancia sobre 100€: *${ganancia}€*
+
+⚠️ _Verifica las cuotas antes de apostar_
+🔗 Sports Picks IA`;
+
+          await fetch(
+            `https://api.telegram.org/bot${telegramToken}/sendMessage`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: telegramChat,
+                text: mensaje,
+                parse_mode: "Markdown"
+              })
+            }
           );
-
-          if (
-            total < 2
-            ) {
-           
-          const beneficio =
-            (
-              (
-                1 - total
-              ) * 100
-            ).toFixed(2);
-
-          const apuestaHome =
-            (
-              bankroll /
-              bestHome.price /
-              total
-            ).toFixed(2);
-
-          const apuestaDraw =
-            (
-              bankroll /
-              bestDraw.price /
-              total
-            ).toFixed(2);
-
-          const apuestaAway =
-            (
-              bankroll /
-              bestAway.price /
-              total
-            ).toFixed(2);
-
-          const ganancia =
-            (
-              (
-                bankroll / total
-              ) - bankroll
-            ).toFixed(2);
-
-          const surebet = {
-
-            partido:
-              `${match.home_team} vs ${match.away_team}`,
-
-            beneficio:
-              `${beneficio}%`,
-
-            ganancia:
-              `${ganancia}€`
-          };
-
-          surebets.push(
-            surebet
-          );
-
-  const hashPartido =
-`${match.home_team}-${match.away_team}`;
-
-const { data: existente } =
-await supabase
-  .from("apuestas_seguras")
-  .select("id, beneficio")
-  .eq("hash_partido", hashPartido)
-  .limit(1);
-
-if (
-  existente &&
-  existente.length > 0
-) {
-
-  await supabase
-    .from("apuestas_seguras")
-    .update({
-      beneficio:
-        surebet.beneficio,
-
-      ganancia:
-        surebet.ganancia,
-
-      fecha:
-        new Date()
-          .toISOString(),
-
-      ultima_actualizacion:
-        new Date()
-          .toISOString(),
-
-      estado:
-        "activa",
-
-      casa_local:
-        bestHome.bookie,
-
-      casa_empate:
-        bestDraw.bookie,
-
-      casa_visitante:
-        bestAway.bookie
-    })
-    .eq(
-      "hash_partido",
-      hashPartido
-    );
-
-} else {
-
-  await supabase
-    .from("apuestas_seguras")
-    .insert([
-      {
-        partido:
-          surebet.partido,
-
-        hash_partido:
-          hashPartido,
-
-        beneficio:
-          surebet.beneficio,
-
-        ganancia:
-          surebet.ganancia,
-
-        fecha:
-          new Date()
-            .toISOString(),
-
-        ultima_actualizacion:
-          new Date()
-            .toISOString(),
-
-        estado:
-          "activa",
-
-        casa_local:
-          bestHome.bookie,
-
-        casa_empate:
-          bestDraw.bookie,
-
-        casa_visitante:
-          bestAway.bookie
-      }
-    ]);
-}
-        
-          if (
-            parseFloat(
-              beneficio
-            ) >= 1.5
-          ) {
-
-            const mensaje =
-`
-🔥 TRUE SUREBET DETECTADA
-
-⚽ ${match.home_team} vs ${match.away_team}
-
-━━━━━━━━━━━━
-
-🏠 LOCAL
-Cuota:
-${bestHome.price}
-
-Casa:
-${bestHome.bookie}
-
-💰 Apostar:
-${apuestaHome}€
-
-━━━━━━━━━━━━
-
-🤝 EMPATE
-Cuota:
-${bestDraw.price}
-
-Casa:
-${bestDraw.bookie}
-
-💰 Apostar:
-${apuestaDraw}€
-
-━━━━━━━━━━━━
-
-✈️ VISITANTE
-Cuota:
-${bestAway.price}
-
-Casa:
-${bestAway.bookie}
-
-💰 Apostar:
-${apuestaAway}€
-
-━━━━━━━━━━━━
-
-📈 Beneficio:
-${beneficio}%
-
-💵 Ganancia segura:
-${ganancia}€
-`;
-
-            await fetch(
-              `https://api.telegram.org/bot${telegramToken}/sendMessage`,
-              {
-                method: "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body: JSON.stringify({
-                  chat_id:
-                    telegramChat,
-
-                  text:
-                    mensaje
-                })
-              }
-            );
-          }
         }
       }
     }
 
-    res.status(200).json({
-
-      total:
-        surebets.length,
-
-      surebets
-    });
+    return res.status(200).json({ ok: true, total: surebets.length, surebets });
 
   } catch (error) {
-
-    res.status(500).json({
-      error:
-        error.message
-    });
+    console.error("Error apuestas-seguras:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
