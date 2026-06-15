@@ -3,27 +3,42 @@
 
     {
       "path": "/api/analisis-ia",
-      "schedule": "0 12 * * *"
+      "schedule": "0 8 * * *"
     },
 
     {
       "path": "/api/apuestas-seguras",
-      "schedule": "30 12 * * *"
+      "schedule": "0 9 * * *"
     },
 
     {
-      "path": "/api/value-bets",
-      "schedule": "0 13 * * *"
-    },
-
-    {
-      "path": "/api/resumen-diario",
-      "schedule": "0 23 * * *"
+      "path": "/api/apuestas-seguras",
+      "schedule": "0 15 * * *"
     },
 
     {
       "path": "/api/actualizar-resultados",
-      "schedule": "0 2 * * *"
+      "schedule": "0 17 * * *"
+    },
+
+    {
+      "path": "/api/actualizar-resultados",
+      "schedule": "0 20 * * *"
+    },
+
+    {
+      "path": "/api/actualizar-resultados",
+      "schedule": "0 22 * * *"
+    },
+
+    {
+      "path": "/api/actualizar-resultados",
+      "schedule": "0 0 * * *"
+    },
+
+    {
+      "path": "/api/resumen-diario",
+      "schedule": "30 0 * * *"
     }
 
   ]
