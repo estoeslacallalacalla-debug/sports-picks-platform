@@ -26,7 +26,7 @@ export default function Home() {
           ["⚽", "Inicio", "/"],
           ["🔴", "En Vivo", "/live"],
           ["📅", "Prematch", "/prematch"],
-          ["🔥", "Picks", "/selecciones"],
+          ["🔥","Picks","/picks"],
           ["💎", "Surebets", "/apuestas-seguras"],
           ["🤖", "Telegram", "/telegram"],
         ].map(([ico, label, href]) => (
