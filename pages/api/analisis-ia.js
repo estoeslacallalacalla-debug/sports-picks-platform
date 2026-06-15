@@ -2,98 +2,92 @@ import { supabase } from "../../lib/supabase";
 
 export default async function handler(req, res) {
   try {
-    const apiKey = process.env.API_FOOTBALL_KEY;
+    const apiKey  = process.env.API_FOOTBALL_KEY;
+    const groqKey = process.env.GROQ_API_KEY;
 
-    if (!apiKey) {
-      return res.status(500).json({ error: "API_FOOTBALL_KEY no configurada" });
-    }
+    if (!apiKey)  return res.status(500).json({ error: "API_FOOTBALL_KEY no configurada" });
+    if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY no configurada" });
 
     const hoy = new Date().toISOString().split("T")[0];
-
-    // Ligas poco conocidas masculinas y femeninas + mundiales
-    const ligas = [
-      // Mundiales
-      { id: 1,   nombre: "🌍 Mundial Masculino" },
-      { id: 32,  nombre: "🌸 Mundial Femenino" },
-      // Ligas poco conocidas - masculino
-      { id: 40,  nombre: "🇧🇴 Liga Bolivia" },
-      { id: 352, nombre: "🇰🇿 Superliga Kazajistán" },
-      { id: 354, nombre: "🇧🇾 Liga Bielorrusia" },
-      { id: 208, nombre: "🇦🇱 Liga Albanesa" },
-      { id: 164, nombre: "🇮🇸 Liga Islandesa" },
-      { id: 288, nombre: "🇿🇲 Liga Zambia" },
-      { id: 341, nombre: "🇬🇪 Erovnuli Liga (Georgia)" },
-      { id: 340, nombre: "🇻🇳 V.League 1 (Vietnam)" },
-      { id: 333, nombre: "🇷🇸 Superliga Serbia" },
-      { id: 271, nombre: "🇩🇰 Superliga Dinamarca" },
-      { id: 113, nombre: "🇸🇪 Allsvenskan (Suecia)" },
-      // Ligas femeninas
-      { id: 838, nombre: "🇺🇸 NWSL (EE.UU. Femenino)" },
-      { id: 59,  nombre: "🇸🇪 Damallsvenskan (Suecia Femenino)" },
-      { id: 545, nombre: "🇩🇪 Frauen-Bundesliga" },
-      { id: 760, nombre: "🌍 Champions League Femenino" },
-    ];
-
     const temporada = new Date().getMonth() >= 6
       ? new Date().getFullYear()
       : new Date().getFullYear() - 1;
 
-    const picks = [];
-    const ligasConPartidos = [];
+    const ligas = [
+      { id: 1,   nombre: "🌍 Mundial Masculino" },
+      { id: 32,  nombre: "🌸 Mundial Femenino" },
+      { id: 40,  nombre: "🇧🇴 Liga Bolivia" },
+      { id: 352, nombre: "🇰🇿 Superliga Kazajistan" },
+      { id: 354, nombre: "🇧🇾 Liga Bielorrusia" },
+      { id: 208, nombre: "🇦🇱 Liga Albanesa" },
+      { id: 164, nombre: "🇮🇸 Liga Islandesa" },
+      { id: 288, nombre: "🇿🇲 Liga Zambia" },
+      { id: 341, nombre: "🇬🇪 Erovnuli Liga Georgia" },
+      { id: 340, nombre: "🇻🇳 V.League 1 Vietnam" },
+      { id: 333, nombre: "🇷🇸 Superliga Serbia" },
+      { id: 271, nombre: "🇩🇰 Superliga Dinamarca" },
+      { id: 113, nombre: "🇸🇪 Allsvenskan Suecia" },
+      { id: 838, nombre: "🇺🇸 NWSL Femenino" },
+      { id: 59,  nombre: "🇸🇪 Damallsvenskan Femenino" },
+      { id: 545, nombre: "🇩🇪 Frauen-Bundesliga Femenino" },
+      { id: 760, nombre: "🌍 Champions League Femenino" },
+    ];
 
+    // 1. Recoger partidos de hoy en todas las ligas
+    const ligasConPartidos = [];
     for (const liga of ligas) {
       try {
-        const res1 = await fetch(
+        const r = await fetch(
           `https://v3.football.api-sports.io/fixtures?league=${liga.id}&date=${hoy}&timezone=Europe/Madrid`,
           { headers: { "x-apisports-key": apiKey } }
         );
-        const data = await res1.json();
-        const partidos = data.response || [];
-
-        if (partidos.length > 0) {
-          ligasConPartidos.push({ ...liga, partidos });
-        }
-
+        const data = await r.json();
+        const partidos = (data.response || []).filter(p => p.fixture.status.short === "NS");
+        if (partidos.length > 0) ligasConPartidos.push({ ...liga, partidos });
         await sleep(300);
       } catch (err) {
-        console.error(`Error liga ${liga.id}:`, err.message);
+        console.error(`Liga ${liga.id}:`, err.message);
       }
     }
 
-    // Para cada partido obtener estadísticas y calcular mercados
+    if (ligasConPartidos.length === 0) {
+      return res.status(200).json({ ok: true, totalPicks: 0, picks: [], mensaje: "Sin partidos hoy" });
+    }
+
+    // 2. Para cada partido: estadisticas reales + analisis Groq
+    const todosLosPicks = [];
+
     for (const liga of ligasConPartidos) {
       for (const partido of liga.partidos) {
-        // Solo partidos no iniciados
-        if (partido.fixture.status.short !== "NS") continue;
-
-        const homeId = partido.teams.home.id;
-        const awayId = partido.teams.away.id;
+        const homeId   = partido.teams.home.id;
+        const awayId   = partido.teams.away.id;
         const homeName = partido.teams.home.name;
         const awayName = partido.teams.away.name;
+        const hora     = partido.fixture.date?.substring(11, 16) || "??:??";
 
-        // Estadísticas de la temporada
+        // Estadisticas reales
         const [statsHome, statsAway, h2h] = await Promise.all([
           fetchStats(apiKey, homeId, liga.id, temporada),
           fetchStats(apiKey, awayId, liga.id, temporada),
           fetchH2H(apiKey, homeId, awayId),
         ]);
-
         await sleep(300);
 
-        const esFemenino = liga.nombre.includes("Femenino") ||
-                           liga.nombre.includes("Femenina") ||
-                           liga.nombre.includes("Women") ||
-                           liga.nombre.includes("🌸");
-
-        const mercadosDetectados = calcularMercados(
-          statsHome, statsAway, h2h, homeName, awayName, esFemenino
+        // Construir resumen de datos para Groq
+        const resumenDatos = construirResumen(
+          homeName, awayName, liga.nombre, hora,
+          statsHome, statsAway, h2h
         );
 
-        // Solo mercados con >= 70% de confianza
-        const mercadosBuenos = mercadosDetectados.filter(m => m.confianza >= 70);
+        // Analisis con Groq IA
+        const analisisIA = await analizarConGroq(groqKey, resumenDatos);
+        if (!analisisIA) continue;
+
+        // Filtrar solo mercados con >= 70% de confianza
+        const mercadosBuenos = analisisIA.filter(m => m.confianza >= 70);
 
         for (const m of mercadosBuenos) {
-          picks.push({
+          todosLosPicks.push({
             partido:   `${homeName} vs ${awayName}`,
             liga:      liga.nombre,
             mercado:   m.mercado,
@@ -105,114 +99,170 @@ export default async function handler(req, res) {
       }
     }
 
-    // Ordenar por confianza y limitar a 10 para no gastar la API
-    const topPicks = picks
+    // 3. Top 10 por confianza
+    const topPicks = todosLosPicks
       .sort((a, b) => b.confianza - a.confianza)
       .slice(0, 10);
 
+    // 4. Guardar en Supabase (borrar los de hoy primero para evitar duplicados)
     if (topPicks.length > 0) {
-      // Evitar duplicados: borrar picks de hoy antes de insertar
-      await supabase
-        .from("picks")
-        .delete()
-        .eq("fecha", hoy)
-        .eq("resultado", "pendiente");
-
+      await supabase.from("picks").delete().eq("fecha", hoy).eq("resultado", "pendiente");
       await supabase.from("picks").insert(topPicks);
     }
 
-    return res.status(200).json({
-      ok: true,
-      totalPicks: topPicks.length,
-      picks: topPicks,
-    });
+    // 5. Enviar cada pick a Telegram
+    const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+    const telegramChat  = process.env.TELEGRAM_CHAT_ID || "@sportspicksia2026";
+
+    for (const pick of topPicks) {
+      const estrellas = pick.confianza >= 85 ? "⭐⭐⭐" : pick.confianza >= 75 ? "⭐⭐" : "⭐";
+      const mensaje =
+`⚽ *PICK DEL DÍA* ${estrellas}
+
+🏆 *${pick.liga}*
+🆚 *${pick.partido}*
+
+🎯 *${pick.mercado}*
+📊 Confianza: *${pick.confianza}%*
+
+🤖 _Análisis con IA (Groq Llama 3)_
+🔗 Sports Picks IA`;
+
+      await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: telegramChat, text: mensaje, parse_mode: "Markdown" })
+      });
+
+      await sleep(500);
+    }
+
+    return res.status(200).json({ ok: true, totalPicks: topPicks.length, picks: topPicks });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 }
 
-// ─── ESTADÍSTICAS ─────────────────────────────────────────────────────────────
+// ─── ESTADISTICAS API-FOOTBALL ────────────────────────────────────────────────
 
 async function fetchStats(apiKey, teamId, leagueId, season) {
   try {
-    const res = await fetch(
+    const r = await fetch(
       `https://v3.football.api-sports.io/teams/statistics?team=${teamId}&league=${leagueId}&season=${season}`,
       { headers: { "x-apisports-key": apiKey } }
     );
-    const data = await res.json();
+    const data = await r.json();
     return data.response || {};
   } catch { return {}; }
 }
 
 async function fetchH2H(apiKey, homeId, awayId) {
   try {
-    const res = await fetch(
+    const r = await fetch(
       `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeId}-${awayId}&last=6`,
       { headers: { "x-apisports-key": apiKey } }
     );
-    const data = await res.json();
+    const data = await r.json();
     return data.response || [];
   } catch { return []; }
 }
 
-// ─── CÁLCULO DE MERCADOS ──────────────────────────────────────────────────────
+// ─── CONSTRUIR RESUMEN PARA GROQ ──────────────────────────────────────────────
 
-function calcularMercados(statsHome, statsAway, h2h, homeName, awayName, esFemenino) {
-  const bonus = esFemenino ? 4 : 0;
+function construirResumen(homeName, awayName, liga, hora, statsHome, statsAway, h2h) {
+  const pjL  = statsHome?.fixtures?.played?.total || 0;
+  const pvL  = statsHome?.fixtures?.wins?.total   || 0;
+  const peL  = statsHome?.fixtures?.draws?.total  || 0;
+  const pdL  = statsHome?.fixtures?.loses?.total  || 0;
+  const gmL  = statsHome?.goals?.for?.average?.total     || "?";
+  const gcL  = statsHome?.goals?.against?.average?.total || "?";
 
-  const pjL = statsHome?.fixtures?.played?.total || 1;
-  const pvL = statsHome?.fixtures?.wins?.total   || 0;
-  const peL = statsHome?.fixtures?.draws?.total  || 0;
+  const pjV  = statsAway?.fixtures?.played?.total || 0;
+  const pvV  = statsAway?.fixtures?.wins?.total   || 0;
+  const peV  = statsAway?.fixtures?.draws?.total  || 0;
+  const pdV  = statsAway?.fixtures?.loses?.total  || 0;
+  const gmV  = statsAway?.goals?.for?.average?.total     || "?";
+  const gcV  = statsAway?.goals?.against?.average?.total || "?";
 
-  const pjV = statsAway?.fixtures?.played?.total || 1;
-  const pvV = statsAway?.fixtures?.wins?.total   || 0;
-  const peV = statsAway?.fixtures?.draws?.total  || 0;
+  const h2hResumen = h2h.slice(0, 5).map(p => {
+    const gH = p.goals?.home ?? 0;
+    const gA = p.goals?.away ?? 0;
+    return `${p.teams.home.name} ${gH}-${gA} ${p.teams.away.name}`;
+  }).join(", ") || "Sin datos";
 
-  const gmL = parseFloat(statsHome?.goals?.for?.average?.total    || 1.3);
-  const gcL = parseFloat(statsHome?.goals?.against?.average?.total || 1.1);
-  const gmV = parseFloat(statsAway?.goals?.for?.average?.total    || 1.1);
-  const gcV = parseFloat(statsAway?.goals?.against?.average?.total || 1.3);
+  return `PARTIDO: ${homeName} vs ${awayName}
+LIGA: ${liga} | HORA: ${hora}
 
-  const golesEsp = ((gmL + gcV) + (gmV + gcL)) / 2;
+LOCAL (${homeName}):
+- Temporada: ${pvL}V ${peL}E ${pdL}D en ${pjL} partidos
+- Media goles marcados/partido: ${gmL}
+- Media goles encajados/partido: ${gcL}
 
-  // H2H stats
-  const h2hN      = h2h.length || 1;
-  const h2hO25    = h2h.filter(p => (p.goals?.home||0)+(p.goals?.away||0) > 2.5).length;
-  const h2hAmbos  = h2h.filter(p => (p.goals?.home||0)>0 && (p.goals?.away||0)>0).length;
+VISITANTE (${awayName}):
+- Temporada: ${pvV}V ${peV}E ${pdV}D en ${pjV} partidos
+- Media goles marcados/partido: ${gmV}
+- Media goles encajados/partido: ${gcV}
 
-  const pctVL   = cap(Math.round((pvL / pjL) * 100));
-  const pctE    = cap(Math.round(((peL/pjL)+(peV/pjV))/2 * 100));
-  const pctVV   = cap(Math.round((pvV / pjV) * 100));
-
-  const pctO15  = cap(Math.round((golesEsp > 1.5 ? 72 : 48) + bonus + h2hO25/h2hN*10));
-  const pctO25  = cap(Math.round((h2hO25/h2hN)*65 + (golesEsp > 2.5 ? 20 : 5) + bonus));
-  const pctU25  = cap(100 - pctO25);
-  const pctAmb  = cap(Math.round((h2hAmbos/h2hN)*65 + (gmL>1&&gmV>1?20:5) + bonus));
-  const pct1X   = cap(pctVL + pctE);
-  const pctX2   = cap(pctE + pctVV);
-
-  const mercados = [];
-
-  // Resultado
-  if (pctVL  >= 70) mercados.push({ mercado: `Victoria ${homeName}`,                  confianza: pctVL  });
-  if (pctE   >= 70) mercados.push({ mercado: "Empate",                                 confianza: pctE   });
-  if (pctVV  >= 70) mercados.push({ mercado: `Victoria ${awayName}`,                   confianza: pctVV  });
-
-  // Doble oportunidad
-  if (pct1X  >= 70) mercados.push({ mercado: `Doble oportunidad 1X (${homeName}/Empate)`, confianza: pct1X });
-  if (pctX2  >= 70) mercados.push({ mercado: `Doble oportunidad X2 (Empate/${awayName})`, confianza: pctX2 });
-
-  // Goles
-  if (pctO15 >= 70) mercados.push({ mercado: "Más de 1.5 goles",   confianza: pctO15 });
-  if (pctO25 >= 70) mercados.push({ mercado: "Más de 2.5 goles",   confianza: pctO25 });
-  if (pctU25 >= 70) mercados.push({ mercado: "Menos de 2.5 goles", confianza: pctU25 });
-
-  // Ambos marcan
-  if (pctAmb >= 70) mercados.push({ mercado: "Ambos equipos marcan", confianza: pctAmb });
-
-  return mercados.sort((a, b) => b.confianza - a.confianza);
+ULTIMOS ENFRENTAMIENTOS DIRECTOS: ${h2hResumen}`;
 }
 
-function cap(n) { return Math.min(Math.max(n, 0), 98); }
+// ─── ANALISIS CON GROQ ────────────────────────────────────────────────────────
+
+async function analizarConGroq(groqKey, resumenDatos) {
+  const prompt = `Analiza este partido de futbol con los datos reales proporcionados.
+Debes evaluar TODOS estos mercados y dar un porcentaje de probabilidad a cada uno.
+
+${resumenDatos}
+
+Responde SOLO con un array JSON valido, sin texto antes ni despues, sin backticks.
+Formato exacto:
+[
+  {"mercado": "Victoria local", "confianza": <0-98>},
+  {"mercado": "Empate", "confianza": <0-98>},
+  {"mercado": "Victoria visitante", "confianza": <0-98>,
+  {"mercado": "Doble oportunidad 1X", "confianza": <0-98>},
+  {"mercado": "Doble oportunidad X2", "confianza": <0-98>},
+  {"mercado": "Mas de 1.5 goles", "confianza": <0-98>},
+  {"mercado": "Mas de 2.5 goles", "confianza": <0-98>},
+  {"mercado": "Menos de 2.5 goles", "confianza": <0-98>},
+  {"mercado": "Ambos equipos marcan", "confianza": <0-98>},
+  {"mercado": "Mas de 3.5 tarjetas", "confianza": <0-98>},
+  {"mercado": "Mas de 8.5 corners", "confianza": <0-98>}
+]
+
+IMPORTANTE: basa los porcentajes en los datos reales del partido, no inventes.`;
+
+  try {
+    const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${groqKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama3-70b-8192",
+        temperature: 0.2,
+        max_tokens: 600,
+        messages: [
+          {
+            role: "system",
+            content: "Eres un analista experto en futbol. Respondes SOLO con JSON valido, sin explicaciones ni backticks."
+          },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+
+    const data = await r.json();
+    const texto = data?.choices?.[0]?.message?.content?.trim() || "";
+    const limpio = texto.replace(/```json|```/g, "").trim();
+    return JSON.parse(limpio);
+
+  } catch (err) {
+    console.error("Error Groq:", err.message);
+    return null;
+  }
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
