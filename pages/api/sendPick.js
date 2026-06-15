@@ -1,4 +1,4 @@
-import { sendTelegramMessage } from "../../biblioteca/telegram";
+import { sendTelegramMessage } from "../../lib/telegram";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,10 +7,7 @@ export default async function handler(req, res) {
 
   const { match, confidence } = req.body || {};
 
-  if (
-    typeof match !== "string" ||
-    typeof confidence !== "number"
-  ) {
+  if (typeof match !== "string" || typeof confidence !== "number") {
     return res.status(400).json({ ok: false });
   }
 
@@ -18,8 +15,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false });
   }
 
-  const message =
-`🔥 SPORTS PICK
+  const message = `🔥 SPORTS PICK
 
 ⚽ Partido: ${match}
 📊 Confianza: ${confidence}%
