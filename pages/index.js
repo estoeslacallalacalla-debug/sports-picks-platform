@@ -27,7 +27,7 @@ export default function Home() {
           ["🔴", "En Vivo", "/live"],
           ["📅", "Prematch", "/prematch"],
           ["🔥", "Picks", "/selecciones"],
-          ["💎", "Surebets", "/apuesta-segura"],
+          ["💎", "Surebets", "/apuestas-seguras"],
           ["🤖", "Telegram", "/telegram"],
         ].map(([ico, label, href]) => (
           <a key={href} href={href} style={{ textDecoration: "none" }}>
