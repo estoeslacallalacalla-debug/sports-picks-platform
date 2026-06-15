@@ -23,7 +23,7 @@ export default function Surebets() {
     }}>
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
         {[["⚽","Inicio","/"],["🔴","En Vivo","/live"],["📅","Prematch","/prematch"],
-          ["🔥","Picks","/selecciones"],["💎","Surebets","/apuestas-seguras"],["🤖","Telegram","/telegram"]
+       ["🔥","Picks","/picks"],["💎","Surebets","/apuestas-seguras"],["🤖","Telegram","/telegram"]
         ].map(([ico, label, href]) => (
           <a key={href} href={href} style={{ textDecoration: "none" }}>
             <button style={{
