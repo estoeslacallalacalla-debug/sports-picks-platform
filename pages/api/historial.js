@@ -1,48 +1,21 @@
-import fs from "fs";
-import path from "path";
+import { supabase } from "../../lib/supabase";
 
-export default function handler(
-  req,
-  res
-) {
-
+export default async function handler(req, res) {
   try {
+    const hoy = new Date().toISOString().split("T")[0];
 
-    const historialPath =
-      path.join(
-        process.cwd(),
-        "data",
-        "historial.json"
-      );
+    const { data, error } = await supabase
+      .from("picks")
+      .select("*")
+      .gte("fecha", hoy)
+      .order("confianza", { ascending: false })
+      .limit(10);
 
-    if (
-      !fs.existsSync(
-        historialPath
-      )
-    ) {
+    if (error) return res.status(500).json({ picks: [], error: error.message });
 
-      return res
-        .status(200)
-        .json([]);
-    }
+    return res.status(200).json({ picks: data || [] });
 
-    const historial =
-      JSON.parse(
-        fs.readFileSync(
-          historialPath,
-          "utf8"
-        )
-      );
-
-    res.status(200).json(
-      historial
-    );
-
-  } catch (error) {
-
-    res.status(500).json({
-      error:
-        error.message
-    });
+  } catch (err) {
+    return res.status(500).json({ picks: [], error: err.message });
   }
 }
