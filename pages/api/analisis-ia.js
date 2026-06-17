@@ -68,9 +68,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, totalPicks: 0, picks: [], mensaje: "Sin partidos hoy", llamadasUsadas });
     }
 
-    // 2. Limitar cuantos partidos analizamos a fondo (cada uno gasta llamadas extra de stats)
-    // Ordenar todos los partidos por fecha (los mas proximos primero)
-    todosPartidos.sort((a, b) =>
+    // 2. Ordenar todos los partidos encontrados por fecha (los mas proximos primero)
+    partidosEncontrados.sort((a, b) =>
       new Date(a.partido.utcDate) - new Date(b.partido.utcDate)
     );
 
