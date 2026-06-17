@@ -9,6 +9,7 @@ export default async function handler(req, res) {
     if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY no configurada" });
 
     const hoy = new Date().toISOString().split("T")[0];
+    const mañana = new Date(Date.now() + 24*60*60*1000).toISOString().split("T")[0];
 
     // Competiciones disponibles GRATIS en football-data.org
     // Codigos oficiales: WC=Mundial, CL=Champions, PL=Premier, PD=LaLiga, etc.
@@ -44,11 +45,15 @@ export default async function handler(req, res) {
       if (!puedeLlamar()) break;
       try {
         const r = await fetch(
-          `https://api.football-data.org/v4/competitions/${comp.code}/matches?dateFrom=${hoy}&dateTo=${hoy}`,
+          `https://api.football-data.org/v4/competitions/${comp.code}/matches?dateFrom=${hoy}&dateTo=${mañana}`,
           { headers: { "X-Auth-Token": fdKey } }
         );
         const data = await r.json();
-        const partidos = (data.matches || []).filter(p => p.status === "TIMED" || p.status === "SCHEDULED");
+        const partidos = (data.matches || []).filter(p => {
+          const esHoy = p.utcDate?.startsWith(hoy) || p.utcDate?.startsWith(mañana);
+          const noJugado = p.status === "TIMED" || p.status === "SCHEDULED";
+          return esHoy && noJugado;
+        });
 
         for (const p of partidos) {
           partidosEncontrados.push({ comp, partido: p });
