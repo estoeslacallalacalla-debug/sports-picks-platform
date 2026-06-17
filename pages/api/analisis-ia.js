@@ -77,6 +77,7 @@ export default async function handler(req, res) {
     const partidosAAnalizar = partidosEncontrados.slice(0, LIMITE_PARTIDOS);
 
     const todosLosPicks = [];
+    let primerErrorGroq = null;
 
     for (const { comp, partido } of partidosAAnalizar) {
       const homeName = partido.homeTeam?.name || "Local";
@@ -108,7 +109,10 @@ NOTA: si es un partido de seleccion nacional (Mundial, Eurocopa) basa el analisi
 en el nivel general de la seleccion y su historial en este tipo de torneos.`;
 
       const analisisIA = await analizarConGroq(groqKey, resumenDatos);
-      if (!analisisIA) continue;
+      if (!analisisIA) {
+        if (!primerErrorGroq) primerErrorGroq = `Groq fallo para: ${homeName} vs ${awayName}`;
+        continue;
+      }
 
       const mercadosBuenos = analisisIA.filter(m => m.confianza >= 70);
 
@@ -162,7 +166,20 @@ en el nivel general de la seleccion y su historial en este tipo de torneos.`;
       await sleep(400);
     }
 
-    return res.status(200).json({ ok: true, totalPicks: topPicks.length, picks: topPicks, llamadasUsadas });
+    return res.status(200).json({
+      ok: true,
+      totalPicks: topPicks.length,
+      picks: topPicks,
+      llamadasUsadas,
+      debug: {
+        partidosEncontrados: partidosEncontrados.length,
+        partidosAnalizados: partidosAAnalizar.length,
+        totalMercadosAntesDelFiltro: todosLosPicks.length,
+        primerErrorGroq,
+        primerPartidoAnalizado: partidosAAnalizar[0] ?
+          `${partidosAAnalizar[0].partido.homeTeam?.name} vs ${partidosAAnalizar[0].partido.awayTeam?.name}` : null
+      }
+    });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -243,12 +260,24 @@ Si hay poca informacion (selecciones nacionales), usa tu conocimiento general de
     });
 
     const data = await r.json();
+
+    if (!r.ok) {
+      console.error("Groq HTTP error:", r.status, JSON.stringify(data));
+      return null;
+    }
+
     const texto = data?.choices?.[0]?.message?.content?.trim() || "";
     const limpio = texto.replace(/```json|```/g, "").trim();
+
+    if (!limpio) {
+      console.error("Groq devolvio texto vacio. Respuesta completa:", JSON.stringify(data));
+      return null;
+    }
+
     return JSON.parse(limpio);
 
   } catch (err) {
-    console.error("Error Groq:", err.message);
+    console.error("Error Groq (catch):", err.message);
     return null;
   }
 }
