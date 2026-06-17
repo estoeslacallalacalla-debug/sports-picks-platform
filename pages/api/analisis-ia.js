@@ -9,33 +9,51 @@ export default async function handler(req, res) {
     if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY no configurada" });
 
     const hoy = new Date().toISOString().split("T")[0];
-    const temporada = new Date().getMonth() >= 6
+
+    // Ligas e IDs reales de API-Football
+    // La temporada del Mundial 2026 es "2026", el resto usa la temporada normal
+    const ligas = [
+      // Mundial y competiciones de selecciones (PRIORIDAD)
+      { id: 1,   nombre: "🌍 Mundial 2026",                temporada: 2026 },
+      { id: 32,  nombre: "🌸 Mundial Femenino",             temporada: null },
+      { id: 5,   nombre: "🏆 UEFA Nations League",          temporada: null },
+      { id: 9,   nombre: "🏆 Copa America",                temporada: null },
+      { id: 10,  nombre: "🌐 Amistosos Internacionales",    temporada: null },
+      { id: 524, nombre: "🌐 Amistosos Internacionales Fem", temporada: null },
+      { id: 34,  nombre: "🌎 Eliminatorias Sudamerica",     temporada: null },
+      { id: 32,  nombre: "🌍 Eliminatorias Europa",         temporada: null },
+      // Ligas poco conocidas - masculino
+      { id: 40,  nombre: "🇧🇴 Liga Bolivia",                temporada: null },
+      { id: 352, nombre: "🇰🇿 Superliga Kazajistan",        temporada: null },
+      { id: 354, nombre: "🇧🇾 Liga Bielorrusia",            temporada: null },
+      { id: 208, nombre: "🇦🇱 Liga Albanesa",               temporada: null },
+      { id: 164, nombre: "🇮🇸 Liga Islandesa",              temporada: null },
+      { id: 288, nombre: "🇿🇲 Liga Zambia",                 temporada: null },
+      // Ligas femeninas
+      { id: 838, nombre: "🇺🇸 NWSL Femenino",               temporada: null },
+      { id: 59,  nombre: "🇸🇪 Damallsvenskan Femenino",     temporada: null },
+    ];
+
+    const temporadaNormal = new Date().getMonth() >= 6
       ? new Date().getFullYear()
       : new Date().getFullYear() - 1;
 
-    const ligas = [
-      { id: 1,   nombre: "🌍 Mundial Masculino" },
-      { id: 32,  nombre: "🌸 Mundial Femenino" },
-      { id: 40,  nombre: "🇧🇴 Liga Bolivia" },
-      { id: 352, nombre: "🇰🇿 Superliga Kazajistan" },
-      { id: 354, nombre: "🇧🇾 Liga Bielorrusia" },
-      { id: 208, nombre: "🇦🇱 Liga Albanesa" },
-      { id: 164, nombre: "🇮🇸 Liga Islandesa" },
-      { id: 288, nombre: "🇿🇲 Liga Zambia" },
-      { id: 341, nombre: "🇬🇪 Erovnuli Liga Georgia" },
-      { id: 340, nombre: "🇻🇳 V.League 1 Vietnam" },
-      { id: 333, nombre: "🇷🇸 Superliga Serbia" },
-      { id: 271, nombre: "🇩🇰 Superliga Dinamarca" },
-      { id: 113, nombre: "🇸🇪 Allsvenskan Suecia" },
-      { id: 838, nombre: "🇺🇸 NWSL Femenino" },
-      { id: 59,  nombre: "🇸🇪 Damallsvenskan Femenino" },
-      { id: 545, nombre: "🇩🇪 Frauen-Bundesliga Femenino" },
-      { id: 760, nombre: "🌍 Champions League Femenino" },
-    ];
+    // LIMITE para no agotar la API gratuita (100 llamadas/dia)
+    const LIMITE_LIGAS_CONSULTADAS  = 12; // maximo de ligas que consultamos por dia
+    const LIMITE_PARTIDOS_ANALIZADOS = 8; // maximo de partidos que pasan por estadisticas+IA
+    let llamadasUsadas = 0;
+    const MAX_LLAMADAS = 80; // margen de seguridad sobre las 100/dia
 
-    // 1. Recoger partidos de hoy en todas las ligas
+    function puedeLlamar(costo = 1) {
+      if (llamadasUsadas + costo > MAX_LLAMADAS) return false;
+      llamadasUsadas += costo;
+      return true;
+    }
+
+    // 1. Recoger partidos de hoy (solo hasta el limite de ligas)
     const ligasConPartidos = [];
-    for (const liga of ligas) {
+    for (const liga of ligas.slice(0, LIMITE_LIGAS_CONSULTADAS)) {
+      if (!puedeLlamar(1)) break;
       try {
         const r = await fetch(
           `https://v3.football.api-sports.io/fixtures?league=${liga.id}&date=${hoy}&timezone=Europe/Madrid`,
@@ -43,74 +61,92 @@ export default async function handler(req, res) {
         );
         const data = await r.json();
         const partidos = (data.response || []).filter(p => p.fixture.status.short === "NS");
-        if (partidos.length > 0) ligasConPartidos.push({ ...liga, partidos });
-        await sleep(300);
+        if (partidos.length > 0) {
+          ligasConPartidos.push({
+            ...liga,
+            temporadaUsar: liga.temporada || temporadaNormal,
+            partidos
+          });
+        }
+        await sleep(250);
       } catch (err) {
         console.error(`Liga ${liga.id}:`, err.message);
       }
     }
 
     if (ligasConPartidos.length === 0) {
-      return res.status(200).json({ ok: true, totalPicks: 0, picks: [], mensaje: "Sin partidos hoy" });
+      return res.status(200).json({ ok: true, totalPicks: 0, picks: [], mensaje: "Sin partidos hoy", llamadasUsadas });
     }
 
-    // 2. Para cada partido: estadisticas reales + analisis Groq
-    const todosLosPicks = [];
-
+    // 2. Aplanar todos los partidos encontrados y limitar cuantos analizamos
+    let todosPartidos = [];
     for (const liga of ligasConPartidos) {
       for (const partido of liga.partidos) {
-        const homeId   = partido.teams.home.id;
-        const awayId   = partido.teams.away.id;
-        const homeName = partido.teams.home.name;
-        const awayName = partido.teams.away.name;
-        const hora     = partido.fixture.date?.substring(11, 16) || "??:??";
+        todosPartidos.push({ liga, partido });
+      }
+    }
+    todosPartidos = todosPartidos.slice(0, LIMITE_PARTIDOS_ANALIZADOS);
 
-        // Estadisticas reales
-        const [statsHome, statsAway, h2h] = await Promise.all([
-          fetchStats(apiKey, homeId, liga.id, temporada),
-          fetchStats(apiKey, awayId, liga.id, temporada),
-          fetchH2H(apiKey, homeId, awayId),
-        ]);
-        await sleep(300);
+    // 3. Para cada partido: estadisticas reales (2 llamadas) + analisis Groq (0 llamadas API-Football)
+    const todosLosPicks = [];
 
-        // Construir resumen de datos para Groq
-        const resumenDatos = construirResumen(
-          homeName, awayName, liga.nombre, hora,
-          statsHome, statsAway, h2h
-        );
+    for (const { liga, partido } of todosPartidos) {
+      if (!puedeLlamar(2)) break; // 2 llamadas: stats local + stats visitante
 
-        // Analisis con Groq IA
-        const analisisIA = await analizarConGroq(groqKey, resumenDatos);
-        if (!analisisIA) continue;
+      const homeId   = partido.teams.home.id;
+      const awayId   = partido.teams.away.id;
+      const homeName = partido.teams.home.name;
+      const awayName = partido.teams.away.name;
+      const hora      = partido.fixture.date?.substring(11, 16) || "??:??";
 
-        // Filtrar solo mercados con >= 70% de confianza
-        const mercadosBuenos = analisisIA.filter(m => m.confianza >= 70);
+      const [statsHome, statsAway] = await Promise.all([
+        fetchStats(apiKey, homeId, liga.id, liga.temporadaUsar),
+        fetchStats(apiKey, awayId, liga.id, liga.temporadaUsar),
+      ]);
+      await sleep(250);
 
-        for (const m of mercadosBuenos) {
-          todosLosPicks.push({
-            partido:   `${homeName} vs ${awayName}`,
-            liga:      liga.nombre,
-            mercado:   m.mercado,
-            confianza: m.confianza,
-            fecha:     hoy,
-            resultado: "pendiente",
-          });
-        }
+      // H2H solo si quedan llamadas disponibles
+      let h2h = [];
+      if (puedeLlamar(1)) {
+        h2h = await fetchH2H(apiKey, homeId, awayId);
+        await sleep(250);
+      }
+
+      const resumenDatos = construirResumen(
+        homeName, awayName, liga.nombre, hora,
+        statsHome, statsAway, h2h
+      );
+
+      const analisisIA = await analizarConGroq(groqKey, resumenDatos);
+      if (!analisisIA) continue;
+
+      const mercadosBuenos = analisisIA.filter(m => m.confianza >= 70);
+
+      for (const m of mercadosBuenos) {
+        todosLosPicks.push({
+          partido:   `${homeName} vs ${awayName}`,
+          liga:      liga.nombre,
+          mercado:   m.mercado,
+          confianza: m.confianza,
+          fecha:     hoy,
+          resultado: "pendiente",
+        });
       }
     }
 
-    // 3. Top 10 por confianza
+    // 4. Top 10 por confianza
     const topPicks = todosLosPicks
+      .filter(p => p.partido && p.partido.trim() !== "")
       .sort((a, b) => b.confianza - a.confianza)
       .slice(0, 10);
 
-    // 4. Guardar en Supabase (borrar los de hoy primero para evitar duplicados)
+    // 5. Guardar en Supabase
     if (topPicks.length > 0) {
       await supabase.from("picks").delete().eq("fecha", hoy).eq("resultado", "pendiente");
       await supabase.from("picks").insert(topPicks);
     }
 
-    // 5. Enviar cada pick a Telegram
+    // 6. Enviar a Telegram
     const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
     const telegramChat  = process.env.TELEGRAM_CHAT_ID || "@sportspicksia2026";
 
@@ -133,11 +169,10 @@ export default async function handler(req, res) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: telegramChat, text: mensaje, parse_mode: "Markdown" })
       });
-
-      await sleep(500);
+      await sleep(400);
     }
 
-    return res.status(200).json({ ok: true, totalPicks: topPicks.length, picks: topPicks });
+    return res.status(200).json({ ok: true, totalPicks: topPicks.length, picks: topPicks, llamadasUsadas });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -189,29 +224,33 @@ function construirResumen(homeName, awayName, liga, hora, statsHome, statsAway, 
     const gH = p.goals?.home ?? 0;
     const gA = p.goals?.away ?? 0;
     return `${p.teams.home.name} ${gH}-${gA} ${p.teams.away.name}`;
-  }).join(", ") || "Sin datos";
+  }).join(", ") || "Sin datos previos (puede ser primer enfrentamiento, normal en mundiales)";
 
   return `PARTIDO: ${homeName} vs ${awayName}
-LIGA: ${liga} | HORA: ${hora}
+LIGA/COMPETICION: ${liga} | HORA: ${hora}
 
 LOCAL (${homeName}):
-- Temporada: ${pvL}V ${peL}E ${pdL}D en ${pjL} partidos
+- Estadisticas disponibles: ${pvL}V ${peL}E ${pdL}D en ${pjL} partidos
 - Media goles marcados/partido: ${gmL}
 - Media goles encajados/partido: ${gcL}
 
 VISITANTE (${awayName}):
-- Temporada: ${pvV}V ${peV}E ${pdV}D en ${pjV} partidos
+- Estadisticas disponibles: ${pvV}V ${peV}E ${pdV}D en ${pjV} partidos
 - Media goles marcados/partido: ${gmV}
 - Media goles encajados/partido: ${gcV}
 
-ULTIMOS ENFRENTAMIENTOS DIRECTOS: ${h2hResumen}`;
+ULTIMOS ENFRENTAMIENTOS DIRECTOS: ${h2hResumen}
+
+NOTA: si es un partido de selecciones (Mundial, Nations League, Eliminatorias) y no hay
+muchas estadisticas de liga, basa el analisis en el nivel general de la seleccion,
+su historial en este tipo de torneos y el contexto del partido.`;
 }
 
 // ─── ANALISIS CON GROQ ────────────────────────────────────────────────────────
 
 async function analizarConGroq(groqKey, resumenDatos) {
-  const prompt = `Analiza este partido de futbol con los datos reales proporcionados.
-Debes evaluar TODOS estos mercados y dar un porcentaje de probabilidad a cada uno.
+  const prompt = `Analiza este partido de futbol con los datos proporcionados.
+Evalua TODOS estos mercados y da un porcentaje de probabilidad realista a cada uno.
 
 ${resumenDatos}
 
@@ -220,7 +259,7 @@ Formato exacto:
 [
   {"mercado": "Victoria local", "confianza": <0-98>},
   {"mercado": "Empate", "confianza": <0-98>},
-  {"mercado": "Victoria visitante", "confianza": <0-98>,
+  {"mercado": "Victoria visitante", "confianza": <0-98>},
   {"mercado": "Doble oportunidad 1X", "confianza": <0-98>},
   {"mercado": "Doble oportunidad X2", "confianza": <0-98>},
   {"mercado": "Mas de 1.5 goles", "confianza": <0-98>},
@@ -231,7 +270,7 @@ Formato exacto:
   {"mercado": "Mas de 8.5 corners", "confianza": <0-98>}
 ]
 
-IMPORTANTE: basa los porcentajes en los datos reales del partido, no inventes.`;
+IMPORTANTE: basa los porcentajes en los datos reales proporcionados, no inventes datos.`;
 
   try {
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
