@@ -108,9 +108,14 @@ VISITANTE (${awayName}): ${formaVisit}
 NOTA: si es un partido de seleccion nacional (Mundial, Eurocopa) basa el analisis
 en el nivel general de la seleccion y su historial en este tipo de torneos.`;
 
-      const analisisIA = await analizarConGroq(groqKey, resumenDatos);
+      const resultadoGroq = await analizarConGroq(groqKey, resumenDatos);
+      if (resultadoGroq?.error) {
+        if (!primerErrorGroq) primerErrorGroq = `${homeName} vs ${awayName}: ${resultadoGroq.error}`;
+        continue;
+      }
+      const analisisIA = resultadoGroq?.mercados;
       if (!analisisIA) {
-        if (!primerErrorGroq) primerErrorGroq = `Groq fallo para: ${homeName} vs ${awayName}`;
+        if (!primerErrorGroq) primerErrorGroq = `Sin mercados: ${homeName} vs ${awayName}`;
         continue;
       }
 
@@ -262,23 +267,27 @@ Si hay poca informacion (selecciones nacionales), usa tu conocimiento general de
     const data = await r.json();
 
     if (!r.ok) {
-      console.error("Groq HTTP error:", r.status, JSON.stringify(data));
-      return null;
+      const errMsg = `HTTP ${r.status}: ${data?.error?.message || JSON.stringify(data)}`;
+      console.error("Groq HTTP error:", errMsg);
+      return { error: errMsg };
     }
 
     const texto = data?.choices?.[0]?.message?.content?.trim() || "";
     const limpio = texto.replace(/```json|```/g, "").trim();
 
     if (!limpio) {
-      console.error("Groq devolvio texto vacio. Respuesta completa:", JSON.stringify(data));
-      return null;
+      return { error: "Groq devolvio texto vacio" };
     }
 
-    return JSON.parse(limpio);
+    try {
+      const parsed = JSON.parse(limpio);
+      return { mercados: parsed };
+    } catch (parseErr) {
+      return { error: `JSON invalido: ${limpio.substring(0, 150)}` };
+    }
 
   } catch (err) {
-    console.error("Error Groq (catch):", err.message);
-    return null;
+    return { error: `Catch: ${err.message}` };
   }
 }
 
