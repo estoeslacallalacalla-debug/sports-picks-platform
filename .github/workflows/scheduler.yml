@@ -1,0 +1,52 @@
+name: ScoutPro Scheduler
+
+on:
+  schedule:
+    # 10:00h EspaÃ±a (08:00 UTC verano)
+    - cron: '0 8 * * *'
+    # 17:00h EspaÃ±a (15:00 UTC verano)
+    - cron: '0 15 * * *'
+    # 23:30h EspaÃ±a (21:30 UTC verano)
+    - cron: '30 21 * * *'
+  # Permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:
+
+jobs:
+  morning:
+    if: github.event.schedule == '0 8 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: AnÃ¡lisis de partidos
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/analisis-ia" || true
+      - name: Esperar 30 segundos
+        run: sleep 30
+      - name: Buscar surebets maÃ±ana
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/apuestas-seguras" || true
+
+  afternoon:
+    if: github.event.schedule == '0 15 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Buscar surebets tarde
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/apuestas-seguras" || true
+      - name: Esperar 30 segundos
+        run: sleep 30
+      - name: Actualizar resultados tarde
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/actualizar-resultados" || true
+
+  night:
+    if: github.event.schedule == '30 21 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Actualizar resultados noche
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/actualizar-resultados" || true
+      - name: Esperar 60 segundos
+        run: sleep 60
+      - name: Enviar resumen del dÃ­a
+        run: |
+          curl -s "${{ secrets.VERCEL_URL }}/api/resumen-diario" || true
