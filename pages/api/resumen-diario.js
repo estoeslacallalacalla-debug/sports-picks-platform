@@ -6,11 +6,10 @@ export default async function handler(req, res) {
     const telegramChat  = process.env.TELEGRAM_CHAT_ID || "@sportspicksia2026";
     const apiKey        = process.env.FOOTBALL_DATA_KEY;
 
-    // Buscar picks de las últimas 28h (cubre desfase España UTC+2)
-    const hace28h = new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString().split("T")[0];
     const hoy     = new Date().toISOString().split("T")[0];
+    const hace28h = new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // Intentar actualizar pendientes antes del resumen
+    // 1. Intentar actualizar resultados pendientes de hoy y ayer
     const { data: pendientes } = await supabase
       .from("picks")
       .select("*")
@@ -52,33 +51,40 @@ export default async function handler(req, res) {
       }
     }
 
-    // Leer picks actualizados
+    // 2. Leer SOLO picks que ya tienen resultado (acierto o fallo) de hoy/ayer
     const { data: picks, error } = await supabase
       .from("picks")
       .select("*")
       .gte("fecha", hace28h)
+      .in("resultado", ["acierto", "fallo"])  // ← solo los ya jugados
       .order("confianza", { ascending: false });
 
     if (error) return res.status(500).json({ error });
 
-    const aciertos   = picks.filter(p => p.resultado === "acierto").length;
-    const fallos     = picks.filter(p => p.resultado === "fallo").length;
-    const sinJugar   = picks.filter(p => p.resultado === "pendiente").length;
-    const totalJug   = aciertos + fallos;
-    const winrate    = totalJug > 0
-      ? ((aciertos / totalJug) * 100).toFixed(0) + "%"
+    const aciertos = picks.filter(p => p.resultado === "acierto").length;
+    const fallos   = picks.filter(p => p.resultado === "fallo").length;
+    const total    = aciertos + fallos;
+    const winrate  = total > 0
+      ? ((aciertos / total) * 100).toFixed(0) + "%"
       : "—";
 
-    const mensaje =
-`📊 *RESUMEN DEL DÍA*
+    // Lista de picks jugados hoy
+    const listapicks = picks.slice(0, 10).map(p => {
+      const icono = p.resultado === "acierto" ? "✅" : "❌";
+      return `${icono} ${p.partido} — ${p.mercado} (${p.confianza}%)`;
+    }).join("\n");
+
+    const mensaje = total === 0
+      ? `📊 *RESUMEN DEL DÍA*\n📅 ${hoy}\n\nHoy no hubo picks con resultado final todavía.\n🔥 Sports Picks IA`
+      : `📊 *RESUMEN DEL DÍA*
 📅 ${hoy}
 
 ✅ Aciertos: *${aciertos}*
 ❌ Fallos: *${fallos}*
-⏳ Pendientes: *${sinJugar}*
 📈 Winrate: *${winrate}*
 
-De ${picks.length} picks → ${aciertos} aciertos, ${fallos} fallos${sinJugar > 0 ? `, ${sinJugar} aún sin jugar` : ""}
+${listapicks ? `📋 *Picks jugados:*\n${listapicks}` : ""}
+
 🔥 Sports Picks IA`;
 
     await fetch(
@@ -94,7 +100,7 @@ De ${picks.length} picks → ${aciertos} aciertos, ${fallos} fallos${sinJugar > 
       }
     );
 
-    return res.status(200).json({ ok: true, aciertos, fallos, sinJugar, winrate });
+    return res.status(200).json({ ok: true, aciertos, fallos, winrate });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -130,15 +136,14 @@ function encontrarPartido(partidos, nombrePick) {
 
 function evaluarMercado(mercado, gL, gV, total, home, away) {
   const m = (mercado || "").toLowerCase();
-  if (m.includes("más de 0.5") || m.includes("over 0.5"))    return total >= 1;
-  if (m.includes("más de 1.5") || m.includes("over 1.5"))    return total >= 2;
-  if (m.includes("más de 2.5") || m.includes("over 2.5"))    return total >= 3;
-  if (m.includes("más de 3.5") || m.includes("over 3.5"))    return total >= 4;
-  if (m.includes("menos de 2.5") || m.includes("under 2.5")) return total <= 2;
-  if (m.includes("menos de 3.5") || m.includes("under 3.5")) return total <= 3;
-  if (m.includes("under"))                                    return total <= 2;
+  if (m.includes("más de 0.5"))                               return total >= 1;
+  if (m.includes("más de 1.5"))                               return total >= 2;
+  if (m.includes("más de 2.5"))                               return total >= 3;
+  if (m.includes("más de 3.5"))                               return total >= 4;
+  if (m.includes("menos de 2.5"))                             return total <= 2;
+  if (m.includes("menos de 3.5"))                             return total <= 3;
   if (m.includes("ambos"))                                    return gL > 0 && gV > 0;
-  if (m.includes("empate") || m.includes("draw"))             return gL === gV;
+  if (m.includes("empate"))                                   return gL === gV;
   if (m.includes("1x"))                                       return gL >= gV;
   if (m.includes("x2"))                                       return gV >= gL;
   if (m.includes("victoria") && limpiar(m).includes(limpiar(home))) return gL > gV;
