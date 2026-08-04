@@ -2,35 +2,36 @@ import { supabase } from "../../lib/supabase";
 
 export default async function handler(req, res) {
   try {
-    const fdKey  = process.env.FOOTBALL_DATA_KEY; // football-data.org
+    const fdKey   = process.env.FOOTBALL_DATA_KEY;
     const groqKey = process.env.GROQ_API_KEY;
 
     if (!fdKey)   return res.status(500).json({ error: "FOOTBALL_DATA_KEY no configurada" });
     if (!groqKey) return res.status(500).json({ error: "GROQ_API_KEY no configurada" });
 
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy     = new Date().toISOString().split("T")[0];
     const en4dias = new Date(Date.now() + 4*24*60*60*1000).toISOString().split("T")[0];
 
     // Competiciones disponibles GRATIS en football-data.org
-    // Codigos oficiales: WC=Mundial, CL=Champions, PL=Premier, PD=LaLiga, etc.
     const competiciones = [
-      { code: "WC",  nombre: "🌍 Mundial 2026" },
-      { code: "CL",  nombre: "🏆 Champions League" },
-      { code: "EC",  nombre: "🏆 Eurocopa" },
-      { code: "PL",  nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
-      { code: "PD",  nombre: "🇪🇸 La Liga" },
-      { code: "BL1", nombre: "🇩🇪 Bundesliga" },
-      { code: "SA",  nombre: "🇮🇹 Serie A" },
-      { code: "FL1", nombre: "🇫🇷 Ligue 1" },
-      { code: "DED", nombre: "🇳🇱 Eredivisie" },
-      { code: "PPL", nombre: "🇵🇹 Primeira Liga" },
-      { code: "BSA", nombre: "🇧🇷 Brasileirao" },
-      { code: "ELC", nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship" },
+      // Amistosos internacionales (activos en verano)
+      { code: "CLI",  nombre: "🌐 Amistosos Internacionales" },
+      // Ligas sudamericanas
+      { code: "BSA",  nombre: "🇧🇷 Brasileirao (Brasil)" },
+      { code: "ASL",  nombre: "🇦🇷 Liga Profesional (Argentina)" },
+      // Ligas europeas que arrancan en verano
+      { code: "PL",   nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
+      { code: "BL1",  nombre: "🇩🇪 Bundesliga" },
+      { code: "PD",   nombre: "🇪🇸 La Liga" },
+      { code: "SA",   nombre: "🇮🇹 Serie A" },
+      { code: "FL1",  nombre: "🇫🇷 Ligue 1" },
+      { code: "DED",  nombre: "🇳🇱 Eredivisie" },
+      { code: "PPL",  nombre: "🇵🇹 Primeira Liga" },
+      { code: "ELC",  nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship" },
+      { code: "CL",   nombre: "🏆 Champions League" },
     ];
 
-    // LIMITE: football-data.org permite 10 llamadas/minuto en plan free
     let llamadasUsadas = 0;
-    const MAX_LLAMADAS = 9; // margen de seguridad sobre las 10/minuto
+    const MAX_LLAMADAS = 9;
 
     function puedeLlamar() {
       if (llamadasUsadas >= MAX_LLAMADAS) return false;
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
       return true;
     }
 
-    // 1. Buscar partidos de hoy en cada competicion (1 llamada por competicion)
+    // 1. Buscar partidos próximos en cada competición
     const partidosEncontrados = [];
 
     for (const comp of competiciones) {
@@ -48,34 +49,44 @@ export default async function handler(req, res) {
           `https://api.football-data.org/v4/competitions/${comp.code}/matches?dateFrom=${hoy}&dateTo=${en4dias}`,
           { headers: { "X-Auth-Token": fdKey } }
         );
+
+        if (!r.ok) {
+          console.log(`Competición ${comp.code} no disponible (${r.status})`);
+          await sleep(6500);
+          continue;
+        }
+
         const data = await r.json();
-        const partidos = (data.matches || []).filter(p => {
-          const noJugado = ["TIMED", "SCHEDULED"].includes(p.status);
-          return noJugado;
-        });
+        const partidos = (data.matches || []).filter(p =>
+          ["TIMED", "SCHEDULED"].includes(p.status)
+        );
 
         for (const p of partidos) {
           partidosEncontrados.push({ comp, partido: p });
         }
 
-        await sleep(6500); // 10 llamadas/min = 1 cada 6 segundos minimo, dejamos margen
+        await sleep(6500);
       } catch (err) {
-        console.error(`Competicion ${comp.code}:`, err.message);
+        console.error(`Error ${comp.code}:`, err.message);
       }
     }
 
     if (partidosEncontrados.length === 0) {
-      return res.status(200).json({ ok: true, totalPicks: 0, picks: [], mensaje: "Sin partidos hoy", llamadasUsadas });
+      return res.status(200).json({
+        ok: true, totalPicks: 0, picks: [],
+        mensaje: "Sin partidos próximos en estas competiciones",
+        llamadasUsadas
+      });
     }
 
-    // 2. Ordenar todos los partidos encontrados por fecha (los mas proximos primero)
+    // Ordenar por fecha (más próximos primero)
     partidosEncontrados.sort((a, b) =>
       new Date(a.partido.utcDate) - new Date(b.partido.utcDate)
     );
 
+    // 2. Analizar los primeros 6 con Groq
     const LIMITE_PARTIDOS = 6;
     const partidosAAnalizar = partidosEncontrados.slice(0, LIMITE_PARTIDOS);
-
     const todosLosPicks = [];
     let primerErrorGroq = null;
 
@@ -86,9 +97,9 @@ export default async function handler(req, res) {
       const awayId   = partido.awayTeam?.id;
       const hora     = partido.utcDate?.substring(11, 16) || "??:??";
 
-      // Estadisticas del equipo si quedan llamadas (opcional, football-data da menos detalle gratis)
-      let formaLocal = "Sin datos previos";
-      let formaVisit = "Sin datos previos";
+      // Obtener últimos partidos de cada equipo
+      let formaLocal = "Sin datos";
+      let formaVisit = "Sin datos";
 
       if (puedeLlamar() && homeId) {
         formaLocal = await fetchUltimosPartidos(fdKey, homeId);
@@ -100,24 +111,23 @@ export default async function handler(req, res) {
       }
 
       const resumenDatos = `PARTIDO: ${homeName} vs ${awayName}
-COMPETICION: ${comp.nombre} | HORA: ${hora}
+COMPETICION: ${comp.nombre} | HORA UTC: ${hora}
 
 LOCAL (${homeName}): ${formaLocal}
 VISITANTE (${awayName}): ${formaVisit}
 
-NOTA: si es un partido de seleccion nacional (Mundial, Eurocopa) basa el analisis
-en el nivel general de la seleccion y su historial en este tipo de torneos.`;
+NOTA: si no hay estadísticas disponibles (amistoso o liga nueva temporada),
+usa tu conocimiento general del nivel del equipo para el análisis.`;
 
       const resultadoGroq = await analizarConGroq(groqKey, resumenDatos);
+
       if (resultadoGroq?.error) {
         if (!primerErrorGroq) primerErrorGroq = `${homeName} vs ${awayName}: ${resultadoGroq.error}`;
         continue;
       }
+
       const analisisIA = resultadoGroq?.mercados;
-      if (!analisisIA) {
-        if (!primerErrorGroq) primerErrorGroq = `Sin mercados: ${homeName} vs ${awayName}`;
-        continue;
-      }
+      if (!analisisIA) continue;
 
       const mercadosBuenos = analisisIA.filter(m => m.confianza >= 70);
 
@@ -127,7 +137,7 @@ en el nivel general de la seleccion y su historial en este tipo de torneos.`;
           liga:      comp.nombre,
           mercado:   m.mercado,
           confianza: m.confianza,
-          fecha:     hoy,
+          fecha:     partido.utcDate?.split("T")[0] || hoy,
           resultado: "pendiente",
         });
       }
@@ -180,9 +190,7 @@ en el nivel general de la seleccion y su historial en este tipo de torneos.`;
         partidosEncontrados: partidosEncontrados.length,
         partidosAnalizados: partidosAAnalizar.length,
         totalMercadosAntesDelFiltro: todosLosPicks.length,
-        primerErrorGroq,
-        primerPartidoAnalizado: partidosAAnalizar[0] ?
-          `${partidosAAnalizar[0].partido.homeTeam?.name} vs ${partidosAAnalizar[0].partido.awayTeam?.name}` : null
+        primerErrorGroq
       }
     });
 
@@ -190,8 +198,6 @@ en el nivel general de la seleccion y su historial en este tipo de torneos.`;
     return res.status(500).json({ error: error.message });
   }
 }
-
-// ─── ULTIMOS PARTIDOS DE UN EQUIPO ────────────────────────────────────────────
 
 async function fetchUltimosPartidos(fdKey, teamId) {
   try {
@@ -201,22 +207,16 @@ async function fetchUltimosPartidos(fdKey, teamId) {
     );
     const data = await r.json();
     const partidos = data.matches || [];
-
     if (partidos.length === 0) return "Sin partidos previos registrados";
-
-    const resumen = partidos.map(p => {
+    return "Últimos: " + partidos.map(p => {
       const gH = p.score?.fullTime?.home ?? "?";
       const gA = p.score?.fullTime?.away ?? "?";
       return `${p.homeTeam.name} ${gH}-${gA} ${p.awayTeam.name}`;
     }).join("; ");
-
-    return `Últimos resultados: ${resumen}`;
   } catch {
     return "Sin datos disponibles";
   }
 }
-
-// ─── ANALISIS CON GROQ ────────────────────────────────────────────────────────
 
 async function analizarConGroq(groqKey, resumenDatos) {
   const prompt = `Analiza este partido de futbol con los datos proporcionados.
@@ -240,8 +240,8 @@ Formato exacto:
   {"mercado": "Mas de 8.5 corners", "confianza": <0-98>}
 ]
 
-IMPORTANTE: basa los porcentajes en los datos reales proporcionados, no inventes datos.
-Si hay poca informacion (selecciones nacionales), usa tu conocimiento general del nivel del equipo.`;
+IMPORTANTE: basa los porcentajes en los datos reales proporcionados.
+Si son amistosos de verano, ten en cuenta que los equipos rotan mucho y los resultados son menos predecibles.`;
 
   try {
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -267,25 +267,19 @@ Si hay poca informacion (selecciones nacionales), usa tu conocimiento general de
     const data = await r.json();
 
     if (!r.ok) {
-      const errMsg = `HTTP ${r.status}: ${data?.error?.message || JSON.stringify(data)}`;
-      console.error("Groq HTTP error:", errMsg);
-      return { error: errMsg };
+      return { error: `HTTP ${r.status}: ${data?.error?.message || JSON.stringify(data)}` };
     }
 
     const texto = data?.choices?.[0]?.message?.content?.trim() || "";
     const limpio = texto.replace(/```json|```/g, "").trim();
 
-    if (!limpio) {
-      return { error: "Groq devolvio texto vacio" };
-    }
+    if (!limpio) return { error: "Groq devolvio texto vacio" };
 
     try {
-      const parsed = JSON.parse(limpio);
-      return { mercados: parsed };
-    } catch (parseErr) {
-      return { error: `JSON invalido: ${limpio.substring(0, 150)}` };
+      return { mercados: JSON.parse(limpio) };
+    } catch {
+      return { error: `JSON invalido: ${limpio.substring(0, 100)}` };
     }
-
   } catch (err) {
     return { error: `Catch: ${err.message}` };
   }
