@@ -1,5 +1,7 @@
 import { supabase } from "../../lib/supabase";
 
+const COMPETICIONES = ["BSA", "ASL", "PL", "BL1", "PD", "PD2", "SA", "FL1", "DED", "PPL", "CLI"];
+
 export default async function handler(req, res) {
   try {
     const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -9,7 +11,7 @@ export default async function handler(req, res) {
     const hoy     = new Date().toISOString().split("T")[0];
     const hace28h = new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-    // 1. Intentar actualizar resultados pendientes de hoy y ayer
+    // 1. Actualizar resultados pendientes buscando en todas las competiciones
     const { data: pendientes } = await supabase
       .from("picks")
       .select("*")
@@ -18,45 +20,52 @@ export default async function handler(req, res) {
 
     if (pendientes && pendientes.length > 0) {
       const fechas = [...new Set(pendientes.map(p => p.fecha))];
+
       for (const fecha of fechas) {
-        try {
-          const r = await fetch(
-            `https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${fecha}&dateTo=${fecha}`,
-            { headers: { "X-Auth-Token": apiKey } }
-          );
-          const data = await r.json();
-          const terminados = (data.matches || []).filter(m => m.status === "FINISHED");
+        // Recoger partidos terminados de todas las competiciones
+        const todosTerminados = [];
 
-          for (const pick of pendientes.filter(p => p.fecha === fecha)) {
-            const partido = encontrarPartido(terminados, pick.partido);
-            if (!partido) continue;
+        for (const comp of COMPETICIONES) {
+          try {
+            const r = await fetch(
+              `https://api.football-data.org/v4/competitions/${comp}/matches?dateFrom=${fecha}&dateTo=${fecha}&status=FINISHED`,
+              { headers: { "X-Auth-Token": apiKey } }
+            );
+            if (!r.ok) continue;
+            const data = await r.json();
+            todosTerminados.push(...(data.matches || []));
+            await sleep(6500); // respetar límite 10 llamadas/minuto
+          } catch { continue; }
+        }
 
-            const gL    = partido.score?.fullTime?.home ?? 0;
-            const gV    = partido.score?.fullTime?.away ?? 0;
-            const total = gL + gV;
-            const home  = partido.homeTeam?.name || "";
-            const away  = partido.awayTeam?.name || "";
+        // Actualizar picks pendientes de esa fecha
+        for (const pick of pendientes.filter(p => p.fecha === fecha)) {
+          const partido = encontrarPartido(todosTerminados, pick.partido);
+          if (!partido) continue;
 
-            const acierto = evaluarMercado(pick.mercado, gL, gV, total, home, away);
-            if (acierto === null) continue;
+          const gL    = partido.score?.fullTime?.home ?? 0;
+          const gV    = partido.score?.fullTime?.away ?? 0;
+          const total = gL + gV;
+          const home  = partido.homeTeam?.name || "";
+          const away  = partido.awayTeam?.name || "";
 
-            await supabase
-              .from("picks")
-              .update({ resultado: acierto ? "acierto" : "fallo" })
-              .eq("id", pick.id);
-          }
-        } catch (err) {
-          console.error("Error actualizando:", err.message);
+          const acierto = evaluarMercado(pick.mercado, gL, gV, total, home, away);
+          if (acierto === null) continue;
+
+          await supabase
+            .from("picks")
+            .update({ resultado: acierto ? "acierto" : "fallo" })
+            .eq("id", pick.id);
         }
       }
     }
 
-    // 2. Leer SOLO picks que ya tienen resultado (acierto o fallo) de hoy/ayer
+    // 2. Leer solo picks con resultado real
     const { data: picks, error } = await supabase
       .from("picks")
       .select("*")
       .gte("fecha", hace28h)
-      .in("resultado", ["acierto", "fallo"])  // ← solo los ya jugados
+      .in("resultado", ["acierto", "fallo"])
       .order("confianza", { ascending: false });
 
     if (error) return res.status(500).json({ error });
@@ -68,14 +77,13 @@ export default async function handler(req, res) {
       ? ((aciertos / total) * 100).toFixed(0) + "%"
       : "—";
 
-    // Lista de picks jugados hoy
     const listapicks = picks.slice(0, 10).map(p => {
       const icono = p.resultado === "acierto" ? "✅" : "❌";
       return `${icono} ${p.partido} — ${p.mercado} (${p.confianza}%)`;
     }).join("\n");
 
     const mensaje = total === 0
-      ? `📊 *RESUMEN DEL DÍA*\n📅 ${hoy}\n\nHoy no hubo picks con resultado final todavía.\n🔥 Sports Picks IA`
+      ? `📊 *RESUMEN DEL DÍA*\n📅 ${hoy}\n\nHoy no hubo picks con resultado final.\n🔥 Sports Picks IA`
       : `📊 *RESUMEN DEL DÍA*
 📅 ${hoy}
 
@@ -83,7 +91,8 @@ export default async function handler(req, res) {
 ❌ Fallos: *${fallos}*
 📈 Winrate: *${winrate}*
 
-${listapicks ? `📋 *Picks jugados:*\n${listapicks}` : ""}
+📋 *Picks jugados:*
+${listapicks}
 
 🔥 Sports Picks IA`;
 
@@ -92,11 +101,7 @@ ${listapicks ? `📋 *Picks jugados:*\n${listapicks}` : ""}
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: telegramChat,
-          text: mensaje,
-          parse_mode: "Markdown"
-        })
+        body: JSON.stringify({ chat_id: telegramChat, text: mensaje, parse_mode: "Markdown" })
       }
     );
 
@@ -136,16 +141,16 @@ function encontrarPartido(partidos, nombrePick) {
 
 function evaluarMercado(mercado, gL, gV, total, home, away) {
   const m = (mercado || "").toLowerCase();
-  if (m.includes("más de 0.5"))                               return total >= 1;
-  if (m.includes("más de 1.5"))                               return total >= 2;
-  if (m.includes("más de 2.5"))                               return total >= 3;
-  if (m.includes("más de 3.5"))                               return total >= 4;
-  if (m.includes("menos de 2.5"))                             return total <= 2;
-  if (m.includes("menos de 3.5"))                             return total <= 3;
-  if (m.includes("ambos"))                                    return gL > 0 && gV > 0;
-  if (m.includes("empate"))                                   return gL === gV;
-  if (m.includes("1x"))                                       return gL >= gV;
-  if (m.includes("x2"))                                       return gV >= gL;
+  if (m.includes("más de 0.5"))  return total >= 1;
+  if (m.includes("más de 1.5"))  return total >= 2;
+  if (m.includes("más de 2.5"))  return total >= 3;
+  if (m.includes("más de 3.5"))  return total >= 4;
+  if (m.includes("menos de 2.5")) return total <= 2;
+  if (m.includes("menos de 3.5")) return total <= 3;
+  if (m.includes("ambos"))        return gL > 0 && gV > 0;
+  if (m.includes("empate"))       return gL === gV;
+  if (m.includes("1x"))           return gL >= gV;
+  if (m.includes("x2"))           return gV >= gL;
   if (m.includes("victoria") && limpiar(m).includes(limpiar(home))) return gL > gV;
   if (m.includes("victoria") && limpiar(m).includes(limpiar(away))) return gV > gL;
   if (m.includes("ganador") && limpiar(m).includes(limpiar(home)))  return gL > gV;
@@ -153,3 +158,5 @@ function evaluarMercado(mercado, gL, gV, total, home, away) {
   if (m.includes("ganador") && m.includes("draw"))                  return gL === gV;
   return null;
 }
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
