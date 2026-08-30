@@ -271,7 +271,10 @@ Si son amistosos de verano, ten en cuenta que los equipos rotan mucho y los resu
     }
 
     const texto = data?.choices?.[0]?.message?.content?.trim() || "";
-    const limpio = texto.replace(/```json|```/g, "").trim();
+
+    // Eliminar bloques <think>...</think> que usan los modelos de razonamiento
+    const sinThink = texto.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    const limpio = sinThink.replace(/```json|```/g, "").trim();
 
     if (!limpio) return { error: "Groq devolvio texto vacio" };
 
