@@ -220,29 +220,14 @@ async function fetchUltimosPartidos(fdKey, teamId) {
 }
 
 async function analizarConGroq(groqKey, resumenDatos) {
-  const prompt = `Analiza este partido de futbol con los datos proporcionados.
-Evalua TODOS estos mercados y da un porcentaje de probabilidad realista a cada uno.
+  const prompt = `Analiza este partido de futbol. Responde SOLO con JSON valido, sin texto antes ni despues, sin backticks, sin explicaciones.
 
 ${resumenDatos}
 
-Responde SOLO con un array JSON valido, sin texto antes ni despues, sin backticks.
-Formato exacto:
-[
-  {"mercado": "Victoria local", "confianza": <0-98>},
-  {"mercado": "Empate", "confianza": <0-98>},
-  {"mercado": "Victoria visitante", "confianza": <0-98>},
-  {"mercado": "Doble oportunidad 1X", "confianza": <0-98>},
-  {"mercado": "Doble oportunidad X2", "confianza": <0-98>},
-  {"mercado": "Mas de 1.5 goles", "confianza": <0-98>},
-  {"mercado": "Mas de 2.5 goles", "confianza": <0-98>},
-  {"mercado": "Menos de 2.5 goles", "confianza": <0-98>},
-  {"mercado": "Ambos equipos marcan", "confianza": <0-98>},
-  {"mercado": "Mas de 3.5 tarjetas", "confianza": <0-98>},
-  {"mercado": "Mas de 8.5 corners", "confianza": <0-98>}
-]
+Devuelve exactamente este array JSON con los 11 mercados:
+[{"mercado":"Victoria local","confianza":0},{"mercado":"Empate","confianza":0},{"mercado":"Victoria visitante","confianza":0},{"mercado":"Doble oportunidad 1X","confianza":0},{"mercado":"Doble oportunidad X2","confianza":0},{"mercado":"Mas de 1.5 goles","confianza":0},{"mercado":"Mas de 2.5 goles","confianza":0},{"mercado":"Menos de 2.5 goles","confianza":0},{"mercado":"Ambos equipos marcan","confianza":0},{"mercado":"Mas de 3.5 tarjetas","confianza":0},{"mercado":"Mas de 8.5 corners","confianza":0}]
 
-IMPORTANTE: basa los porcentajes en los datos reales proporcionados.
-Si son amistosos de verano, ten en cuenta que los equipos rotan mucho y los resultados son menos predecibles.`;
+Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;`;
 
   try {
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -254,7 +239,7 @@ Si son amistosos de verano, ten en cuenta que los equipos rotan mucho y los resu
       body: JSON.stringify({
         model: "openai/gpt-oss-20b",
         temperature: 0.2,
-        max_tokens: 600,
+        max_tokens: 400,
         messages: [
           {
             role: "system",
