@@ -119,6 +119,7 @@ VISITANTE (${awayName}): ${formaVisit}
 NOTA: si no hay estadísticas disponibles (amistoso o liga nueva temporada),
 usa tu conocimiento general del nivel del equipo para el análisis.`;
 
+      await sleep(8000); // pausa para no superar el límite de tokens/minuto de Groq
       const resultadoGroq = await analizarConGroq(groqKey, resumenDatos);
 
       if (resultadoGroq?.error) {
