@@ -251,7 +251,7 @@ Si son amistosos de verano, ten en cuenta que los equipos rotan mucho y los resu
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "qwen/qwen3.6-27b",
         temperature: 0.2,
         max_tokens: 600,
         messages: [
