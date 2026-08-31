@@ -220,12 +220,14 @@ async function fetchUltimosPartidos(fdKey, teamId) {
 }
 
 async function analizarConGroq(groqKey, resumenDatos) {
+  const plantilla = '[{"mercado":"Victoria local","confianza":0},{"mercado":"Empate","confianza":0},{"mercado":"Victoria visitante","confianza":0},{"mercado":"Doble oportunidad 1X","confianza":0},{"mercado":"Doble oportunidad X2","confianza":0},{"mercado":"Mas de 1.5 goles","confianza":0},{"mercado":"Mas de 2.5 goles","confianza":0},{"mercado":"Menos de 2.5 goles","confianza":0},{"mercado":"Ambos equipos marcan","confianza":0},{"mercado":"Mas de 3.5 tarjetas","confianza":0},{"mercado":"Mas de 8.5 corners","confianza":0}]';
+
   const prompt = `Analiza este partido de futbol. Responde SOLO con JSON valido, sin texto antes ni despues, sin backticks, sin explicaciones.
 
 ${resumenDatos}
 
 Devuelve exactamente este array JSON con los 11 mercados:
-[{"mercado":"Victoria local","confianza":0},{"mercado":"Empate","confianza":0},{"mercado":"Victoria visitante","confianza":0},{"mercado":"Doble oportunidad 1X","confianza":0},{"mercado":"Doble oportunidad X2","confianza":0},{"mercado":"Mas de 1.5 goles","confianza":0},{"mercado":"Mas de 2.5 goles","confianza":0},{"mercado":"Menos de 2.5 goles","confianza":0},{"mercado":"Ambos equipos marcan","confianza":0},{"mercado":"Mas de 3.5 tarjetas","confianza":0},{"mercado":"Mas de 8.5 corners","confianza":0}]
+${plantilla}
 
 Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;`;
 
