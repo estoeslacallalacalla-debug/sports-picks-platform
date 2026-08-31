@@ -229,7 +229,7 @@ ${resumenDatos}
 Devuelve exactamente este array JSON con los 11 mercados:
 ${plantilla}
 
-Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;`;
+Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
 
   try {
     const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -277,3 +277,4 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;`;
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+              
