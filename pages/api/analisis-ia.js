@@ -239,7 +239,7 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-4-scout",
+        model: "openai/gpt-oss-120b",
         temperature: 0.2,
         max_tokens: 400,
         messages: [
