@@ -241,7 +241,7 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
       body: JSON.stringify({
         model: "openai/gpt-oss-120b",
         temperature: 0.2,
-        max_tokens: 400,
+        max_tokens: 800,
         messages: [
           {
             role: "system",
@@ -266,9 +266,23 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
 
     if (!limpio) return { error: "Groq devolvio texto vacio" };
 
+    // Intentar extraer array JSON aunque esté incompleto
     try {
       return { mercados: JSON.parse(limpio) };
     } catch {
+      // Intentar extraer solo la parte válida del JSON
+      const match = limpio.match(/\[[\s\S]*\]/);
+      if (match) {
+        try {
+          return { mercados: JSON.parse(match[0]) };
+        } catch {
+          // Intentar reparar JSON incompleto añadiendo cierre
+          try {
+            const reparado = match[0].replace(/,\s*$/, "") + "]";
+            return { mercados: JSON.parse(reparado) };
+          } catch {}
+        }
+      }
       return { error: `JSON invalido: ${limpio.substring(0, 100)}` };
     }
   } catch (err) {
@@ -277,3 +291,4 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        
