@@ -239,7 +239,7 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-20b",
+        model: "llama-4-scout",
         temperature: 0.2,
         max_tokens: 400,
         messages: [
@@ -277,4 +277,3 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-              
