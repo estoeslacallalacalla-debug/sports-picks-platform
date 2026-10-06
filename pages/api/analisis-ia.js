@@ -22,6 +22,7 @@ export default async function handler(req, res) {
       { code: "PL",   nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
       { code: "BL1",  nombre: "🇩🇪 Bundesliga" },
       { code: "PD",   nombre: "🇪🇸 La Liga" },
+      { code: "PD2",  nombre: "🇪🇸 Segunda División" },
       { code: "SA",   nombre: "🇮🇹 Serie A" },
       { code: "FL1",  nombre: "🇫🇷 Ligue 1" },
       { code: "DED",  nombre: "🇳🇱 Eredivisie" },
