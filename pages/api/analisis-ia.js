@@ -11,28 +11,20 @@ export default async function handler(req, res) {
     const hoy     = new Date().toISOString().split("T")[0];
     const en4dias = new Date(Date.now() + 4*24*60*60*1000).toISOString().split("T")[0];
 
-    // Competiciones disponibles GRATIS en football-data.org
+    // Solo competiciones incluidas en el plan gratuito de football-data.org
     const competiciones = [
-      // Amistosos internacionales (activos en verano)
-      { code: "CLI",  nombre: "🌐 Amistosos Internacionales" },
-      // Ligas sudamericanas
-      { code: "BSA",  nombre: "🇧🇷 Brasileirao (Brasil)" },
-      { code: "ASL",  nombre: "🇦🇷 Liga Profesional (Argentina)" },
-      // Ligas europeas que arrancan en verano
-      { code: "PL",   nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League" },
-      { code: "BL1",  nombre: "🇩🇪 Bundesliga" },
-      { code: "PD",   nombre: "🇪🇸 La Liga" },
-      { code: "PD2",  nombre: "🇪🇸 Segunda División" },
-      { code: "SA",   nombre: "🇮🇹 Serie A" },
-      { code: "FL1",  nombre: "🇫🇷 Ligue 1" },
-      { code: "DED",  nombre: "🇳🇱 Eredivisie" },
-      { code: "PPL",  nombre: "🇵🇹 Primeira Liga" },
-      { code: "ELC",  nombre: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship" },
-      { code: "CL",   nombre: "🏆 Champions League" },
+      { code: "PL",  nombre: "🇬🇧 Premier League" },
+      { code: "PD",  nombre: "🇪🇸 La Liga" },
+      { code: "BL1", nombre: "🇩🇪 Bundesliga" },
+      { code: "SA",  nombre: "🇮🇹 Serie A" },
+      { code: "FL1", nombre: "🇫🇷 Ligue 1" },
+      { code: "BSA", nombre: "🇧🇷 Brasileirao" },
+      { code: "DED", nombre: "🇳🇱 Eredivisie" },
+      { code: "CL",  nombre: "🏆 Champions League" },
     ];
 
     let llamadasUsadas = 0;
-    const MAX_LLAMADAS = 9;
+    const MAX_LLAMADAS = 16;
 
     function puedeLlamar() {
       if (llamadasUsadas >= MAX_LLAMADAS) return false;
@@ -85,8 +77,8 @@ export default async function handler(req, res) {
       new Date(a.partido.utcDate) - new Date(b.partido.utcDate)
     );
 
-    // 2. Analizar los primeros 6 con Groq
-    const LIMITE_PARTIDOS = 6;
+    // 2. Analizar los primeros partidos con Groq
+    const LIMITE_PARTIDOS = 4;
     const partidosAAnalizar = partidosEncontrados.slice(0, LIMITE_PARTIDOS);
     const todosLosPicks = [];
     let primerErrorGroq = null;
@@ -98,7 +90,6 @@ export default async function handler(req, res) {
       const awayId   = partido.awayTeam?.id;
       const hora     = partido.utcDate?.substring(11, 16) || "??:??";
 
-      // Obtener últimos partidos de cada equipo
       let formaLocal = "Sin datos";
       let formaVisit = "Sin datos";
 
@@ -117,8 +108,7 @@ COMPETICION: ${comp.nombre} | HORA UTC: ${hora}
 LOCAL (${homeName}): ${formaLocal}
 VISITANTE (${awayName}): ${formaVisit}
 
-NOTA: si no hay estadísticas disponibles (amistoso o liga nueva temporada),
-usa tu conocimiento general del nivel del equipo para el análisis.`;
+NOTA: si no hay estadísticas disponibles, usa tu conocimiento general del nivel del equipo.`;
 
       await sleep(8000); // pausa para no superar el límite de tokens/minuto de Groq
       const resultadoGroq = await analizarConGroq(groqKey, resumenDatos);
@@ -151,9 +141,9 @@ usa tu conocimiento general del nivel del equipo para el análisis.`;
       .sort((a, b) => b.confianza - a.confianza)
       .slice(0, 10);
 
-    // 4. Guardar en Supabase
+    // 4. Guardar en Supabase (borra pendientes de hoy en adelante para no duplicar)
     if (topPicks.length > 0) {
-      await supabase.from("picks").delete().eq("fecha", hoy).eq("resultado", "pendiente");
+      await supabase.from("picks").delete().gte("fecha", hoy).eq("resultado", "pendiente");
       await supabase.from("picks").insert(topPicks);
     }
 
@@ -168,11 +158,11 @@ usa tu conocimiento general del nivel del equipo para el análisis.`;
 
 🏆 *${pick.liga}*
 🆚 *${pick.partido}*
+📅 ${pick.fecha}
 
 🎯 *${pick.mercado}*
 📊 Confianza: *${pick.confianza}%*
 
-🤖 _Análisis con IA (Groq Llama 3)_
 🔗 Sports Picks IA`;
 
       await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
@@ -260,24 +250,19 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
     }
 
     const texto = data?.choices?.[0]?.message?.content?.trim() || "";
-
-    // Eliminar bloques <think>...</think> que usan los modelos de razonamiento
     const sinThink = texto.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     const limpio = sinThink.replace(/```json|```/g, "").trim();
 
     if (!limpio) return { error: "Groq devolvio texto vacio" };
 
-    // Intentar extraer array JSON aunque esté incompleto
     try {
       return { mercados: JSON.parse(limpio) };
     } catch {
-      // Intentar extraer solo la parte válida del JSON
       const match = limpio.match(/\[[\s\S]*\]/);
       if (match) {
         try {
           return { mercados: JSON.parse(match[0]) };
         } catch {
-          // Intentar reparar JSON incompleto añadiendo cierre
           try {
             const reparado = match[0].replace(/,\s*$/, "") + "]";
             return { mercados: JSON.parse(reparado) };
@@ -292,4 +277,3 @@ Sustituye cada 0 por la probabilidad real (0-98). Solo JSON, nada mas.`;
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-        
