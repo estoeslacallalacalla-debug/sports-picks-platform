@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron-manana",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron-noche",
-      "schedule": "0 21 * * *"
-    }
-  ]
-}
+{}
