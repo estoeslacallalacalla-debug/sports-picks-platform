@@ -1,6 +1,7 @@
 import { supabase } from "../../lib/supabase";
 
-const CASAS = ["betfair", "william hill", "unibet", "pinnacle", "betsson", "coolbet", "winamax", "betclic", "leovegas", "codere", "bwin", "bet365", "marathon bet", "nordic bet", "1xbet"];
+// Solo casas con web para España (se descartan versiones de otros paises y exchanges)
+const CASAS = ["bet365", "betfair", "william hill", "betsson", "bwin", "888sport", "betway", "sportium", "codere", "luckia", "retabet", "marca"];
 
 // Cada deporte cuesta 2 creditos por ejecucion (h2h + totals)
 const DEPORTES = [
@@ -12,8 +13,11 @@ const DEPORTES = [
   "soccer_uefa_nations_league"
 ];
 
-const BANK = 100;
+const BANK = 50;
+const MIN_BENEFICIO = 0.8;
 const MAX_BENEFICIO = 5;
+const MAX_AVISOS = 3;
+const MAX_EDAD_MIN = 15;
 const CREDITOS_MINIMOS = 30;
 
 export default async function handler(req, res) {
@@ -27,10 +31,10 @@ export default async function handler(req, res) {
     await supabase
       .from("apuestas_seguras")
       .delete()
-      .lt("fecha", new Date(Date.now() - 86400000).toISOString());
+      .lt("fecha", new Date(Date.now() - 20 * 3600 * 1000).toISOString());
 
-    const encontradas = [];
-    const debug = { deportes: 0, partidos: 0, conCasas: 0, errores: [], creditosRestantes: null };
+    const todas = [];
+    const debug = { deportes: 0, partidos: 0, conCasas: 0, candidatas: 0, errores: [], creditosRestantes: null };
 
     for (const deporte of DEPORTES) {
       const url = "https://api.the-odds-api.com/v4/sports/" + deporte + "/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=" + KEY;
@@ -51,10 +55,7 @@ export default async function handler(req, res) {
       debug.partidos += lista.length;
 
       for (const match of lista) {
-        const casas = (match.bookmakers || []).filter(function (b) {
-          const t = b.title.toLowerCase();
-          return CASAS.some(function (c) { return t.indexOf(c) !== -1; });
-        });
+        const casas = (match.bookmakers || []).filter(casaValida);
         if (casas.length < 2) continue;
         debug.conCasas++;
 
@@ -64,56 +65,11 @@ export default async function handler(req, res) {
         for (const cand of candidatas) {
           const sb = evaluar(cand.sels);
           if (!sb) continue;
-
-          const hash = (match.id + cand.mercado).toLowerCase().replace(/\W/g, "");
-          const ahora = new Date().toISOString();
-          const a = sb.apuestas;
-
-          const registro = {
-            partido: nombre,
-            hash_partido: hash,
-            beneficio: sb.beneficio + "%",
-            ganancia: sb.ganancia + "€",
-            retorno: sb.retorno + "€",
-            fecha: ahora,
-            ultima_actualizacion: ahora,
-            estado: "activa",
-            casa_local: a[0] ? a[0].casa : "",
-            cuota_local: a[0] ? a[0].cuota : 0,
-            apuesta_local: a[0] ? a[0].stake + "€" : "0€",
-            casa_empate: a[1] ? a[1].casa : "",
-            cuota_empate: a[1] ? a[1].cuota : 0,
-            apuesta_empate: a[1] ? a[1].stake + "€" : "0€",
-            casa_visitante: a[2] ? a[2].casa : "",
-            cuota_visitante: a[2] ? a[2].cuota : 0,
-            apuesta_visitante: a[2] ? a[2].stake + "€" : "0€"
-          };
-
-          encontradas.push({ partido: nombre, mercado: cand.mercado, beneficio: sb.beneficio });
-
-          const { data: existe } = await supabase
-            .from("apuestas_seguras")
-            .select("id")
-            .eq("hash_partido", hash)
-            .limit(1);
-
-          if (existe && existe.length > 0) {
-            await supabase.from("apuestas_seguras").update(registro).eq("hash_partido", hash);
-            continue;
-          }
-
-          await supabase.from("apuestas_seguras").insert([registro]);
-
-          let texto = "💰 SUREBET DETECTADA\n\n⚽ " + nombre + "\n🎯 " + cand.mercado + "\n\n";
-          a.forEach(function (ap) {
-            texto += "🏦 " + ap.casa + " → " + ap.sel + "\nCuota: " + ap.cuota + " | Apostar: " + ap.stake + "€\n\n";
-          });
-          texto += "📈 Beneficio: " + sb.beneficio + "%\n💵 Ganancia sobre 100€: " + sb.ganancia + "€\n\n⚠️ Verifica las cuotas antes de apostar";
-
-          await fetch("https://api.telegram.org/bot" + TOKEN + "/sendMessage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chat_id: CHAT, text: texto })
+          todas.push({
+            nombre: nombre,
+            mercado: cand.mercado,
+            sb: sb,
+            hash: (match.id + cand.mercado).toLowerCase().replace(/\W/g, "")
           });
         }
       }
@@ -124,10 +80,87 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true, total: encontradas.length, surebets: encontradas, debug: debug });
+    debug.candidatas = todas.length;
+
+    // Surebets ya registradas en las ultimas horas
+    const { data: existentes } = await supabase.from("apuestas_seguras").select("hash_partido");
+    const hashes = (existentes || []).map(function (x) { return x.hash_partido; });
+    const huecos = Math.max(0, MAX_AVISOS - hashes.length);
+    const ahora = new Date().toISOString();
+
+    // Actualizar las que ya existian (sin volver a avisar)
+    for (const t of todas) {
+      if (hashes.indexOf(t.hash) !== -1) {
+        await supabase.from("apuestas_seguras").update(crearRegistro(t, ahora)).eq("hash_partido", t.hash);
+      }
+    }
+
+    // Nuevas: las de mayor beneficio primero, con tope diario
+    const nuevas = todas
+      .filter(function (t) { return hashes.indexOf(t.hash) === -1; })
+      .sort(function (a, b) { return parseFloat(b.sb.beneficio) - parseFloat(a.sb.beneficio); })
+      .slice(0, huecos);
+
+    const enviadas = [];
+
+    for (const t of nuevas) {
+      await supabase.from("apuestas_seguras").insert([crearRegistro(t, ahora)]);
+
+      let texto = "💰 SUREBET DETECTADA\n\n⚽ " + t.nombre + "\n🎯 " + t.mercado + "\n\n";
+      t.sb.apuestas.forEach(function (ap) {
+        texto += "🏦 " + ap.casa + " → " + ap.sel + "\nCuota: " + ap.cuota + " | Apostar: " + ap.stake + "€\n\n";
+      });
+      texto += "📈 Beneficio: " + t.sb.beneficio + "%\n💵 Ganancia sobre " + BANK + "€: " + t.sb.ganancia + "€\n\n⏱ Las cuotas cambian rapido: comprueba las dos antes de apostar";
+
+      await fetch("https://api.telegram.org/bot" + TOKEN + "/sendMessage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: CHAT, text: texto })
+      });
+
+      enviadas.push({ partido: t.nombre, mercado: t.mercado, beneficio: t.sb.beneficio });
+    }
+
+    return res.status(200).json({ ok: true, total: enviadas.length, surebets: enviadas, debug: debug });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
+}
+
+function casaValida(b) {
+  const t = b.title.toLowerCase();
+  if (t.indexOf("(") !== -1) return false;
+  if ((b.key || "").indexOf("_ex") !== -1) return false;
+  return CASAS.some(function (c) { return t.indexOf(c) !== -1; });
+}
+
+function fresco(mkt) {
+  if (!mkt.last_update) return true;
+  const edad = (Date.now() - new Date(mkt.last_update).getTime()) / 60000;
+  return edad <= MAX_EDAD_MIN;
+}
+
+function crearRegistro(t, ahora) {
+  const a = t.sb.apuestas;
+  return {
+    partido: t.nombre,
+    hash_partido: t.hash,
+    beneficio: t.sb.beneficio + "%",
+    ganancia: t.sb.ganancia + "€",
+    retorno: t.sb.retorno + "€",
+    fecha: ahora,
+    ultima_actualizacion: ahora,
+    estado: "activa",
+    casa_local: a[0] ? a[0].casa : "",
+    cuota_local: a[0] ? a[0].cuota : 0,
+    apuesta_local: a[0] ? a[0].stake + "€" : "0€",
+    casa_empate: a[1] ? a[1].casa : "",
+    cuota_empate: a[1] ? a[1].cuota : 0,
+    apuesta_empate: a[1] ? a[1].stake + "€" : "0€",
+    casa_visitante: a[2] ? a[2].casa : "",
+    cuota_visitante: a[2] ? a[2].cuota : 0,
+    apuesta_visitante: a[2] ? a[2].stake + "€" : "0€"
+  };
 }
 
 function buscarCandidatas(casas) {
@@ -153,7 +186,7 @@ function mejoresCuotas(casas, key) {
   const mejores = {};
   casas.forEach(function (b) {
     const mkt = (b.markets || []).find(function (m) { return m.key === key; });
-    if (!mkt) return;
+    if (!mkt || !fresco(mkt)) return;
     mkt.outcomes.forEach(function (o) {
       const precio = parseFloat(o.price);
       if (!precio || precio <= 1) return;
@@ -172,7 +205,7 @@ function evaluar(sels) {
   if (suma >= 1) return null;
 
   const beneficio = (1 / suma - 1) * 100;
-  if (beneficio > MAX_BENEFICIO) return null;
+  if (beneficio < MIN_BENEFICIO || beneficio > MAX_BENEFICIO) return null;
 
   return {
     beneficio: beneficio.toFixed(2),
